@@ -6,6 +6,7 @@
 
 import requests
 import os
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -27,23 +28,113 @@ STADIUM_GRID = {
     "Kiwoom":  {"nx": 58, "ny": 125},
 }
 
+# 하늘 상태 코드
+SKY_CODE = {
+    "1": "☀️ 맑음",
+    "3": "⛅ 구름많음",
+    "4": "☁️ 흐림"
+}
+
+# 강수 형태 코드
+PTY_CODE = {
+    "0": "없음",
+    "1": "🌧️ 비",
+    "2": "🌨️ 비/눈",
+    "3": "❄️ 눈",
+    "4": "🌦️ 소나기"
+}
+
+
+def _get_base_time(date: datetime) -> tuple:
+    """
+    기상청 API 기준 시간 계산
+    발표 시간: 02, 05, 08, 11, 14, 17, 20, 23시
+    """
+    base_times = [2, 5, 8, 11, 14, 17, 20, 23]
+    hour = date.hour
+
+    base_time = "2300"
+    base_date = (date - timedelta(days=1)).strftime("%Y%m%d")
+
+    for t in reversed(base_times):
+        if hour >= t:
+            base_time = f"{t:02d}00"
+            base_date = date.strftime("%Y%m%d")
+            break
+
+    return base_date, base_time
+
 
 def get_weather(team: str, date: str) -> dict:
     """
     경기장 날씨 예보 조회
     :param team: 구단명 (예: "KIA")
     :param date: 날짜 (예: "20250501")
-    :return: {
-        "temp": 22,
-        "rain_prob": 30,
-        "sky": "구름많음",
-        "rain": "없음",
-        "humidity": 60,
-        "wind": 3.2
-    }
+    :return: 날씨 정보 딕셔너리
     """
-    # TODO: 구현 필요
-    return {}
+    if not WEATHER_API_KEY:
+        return _get_mock_weather()
+
+    grid = STADIUM_GRID.get(team, {"nx": 60, "ny": 127})
+    now = datetime.now()
+    base_date, base_time = _get_base_time(now)
+
+    params = {
+        "serviceKey": WEATHER_API_KEY,
+        "pageNo": 1,
+        "numOfRows": 1000,
+        "dataType": "JSON",
+        "base_date": base_date,
+        "base_time": base_time,
+        "nx": grid["nx"],
+        "ny": grid["ny"]
+    }
+
+    try:
+        res = requests.get(WEATHER_API_URL, params=params, timeout=5)
+        data = res.json()
+        items = data['response']['body']['items']['item']
+
+        # 예보 날짜 필터링
+        target_date = date if date else datetime.now().strftime("%Y%m%d")
+        target_items = [i for i in items if i['fcstDate'] == target_date]
+
+        weather = {}
+        for item in target_items:
+            category = item['category']
+            value = item['fcstValue']
+            if category == 'TMP':
+                weather['temp'] = f"{value}℃"
+            elif category == 'POP':
+                weather['rain_prob'] = int(value)
+            elif category == 'SKY':
+                weather['sky'] = SKY_CODE.get(value, "알 수 없음")
+            elif category == 'PTY':
+                weather['rain'] = PTY_CODE.get(value, "없음")
+            elif category == 'REH':
+                weather['humidity'] = f"{value}%"
+            elif category == 'WSD':
+                weather['wind'] = f"{value}m/s"
+
+        return weather if weather else _get_mock_weather()
+
+    except Exception as e:
+        print(f"날씨 API 오류: {e}")
+        return _get_mock_weather()
+
+
+def _get_mock_weather() -> dict:
+    """
+    API 오류 시 기본값 반환
+    """
+    return {
+        "temp": "정보 없음",
+        "rain_prob": 0,
+        "sky": "☀️ 맑음",
+        "rain": "없음",
+        "humidity": "정보 없음",
+        "wind": "정보 없음"
+    }
 
 
 def get_rain_probability(team: str, date: str) -> int:
@@ -53,7 +144,6 @@ def get_rain_probability(team: str, date: str) -> int:
     :param date: 날짜
     :return: 강수 확률 (0~100)
     """
-    # TODO: 구현 필요
     weather = get_weather(team, date)
     return weather.get("rain_prob", 0)
 
@@ -61,8 +151,6 @@ def get_rain_probability(team: str, date: str) -> int:
 def get_weather_comment(rain_prob: int) -> str:
     """
     강수 확률에 따른 직관 추천 코멘트
-    :param rain_prob: 강수 확률
-    :return: 코멘트 문자열
     """
     if rain_prob >= 70:
         return "🌧️ 우천취소 가능성이 높습니다. 직관 전 공식 SNS를 확인하세요!"
