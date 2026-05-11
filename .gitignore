@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# 가상환경
+venv/
+env/
+.env/
+.venv/
+
+# 환경변수
+.env
+.env.local
+.env.*.local
+
+# 데이터 파일
+data/raw/
+data/cache/
+*.csv
+*.json
+*.pkl
+*.parquet
+
+# Streamlit 캐시
+.streamlit/secrets.toml
+.streamlit/cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# 빌드 결과물
+dist/
+build/
+*.egg-info/
+
+# 로그
+*.log
+logs/
+
+# 테스트 커버리지
+.coverage
+htmlcov/
+.pytest_cache/
