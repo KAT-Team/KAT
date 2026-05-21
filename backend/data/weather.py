@@ -9,10 +9,12 @@ import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
-load_dotenv()
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+load_dotenv(dotenv_path=BASE_DIR / 'backend' / '.env')
 
-WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
-WEATHER_API_URL = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst"
+WEATHER_API_KEY: str = os.getenv("WEATHER_API_KEY") or ""
+WEATHER_API_URL: str = os.getenv("WEATHER_API_URL") or ""
 
 # 경기장별 기상청 격자 좌표 (nx, ny)
 STADIUM_GRID = {

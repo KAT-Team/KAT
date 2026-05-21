@@ -77,6 +77,9 @@ def show():
         # 날씨 카드
         draw_weather_card(weather)
 
+        st.write("--- API 연동 데이터 확인용 ---")
+        st.write(weather)
+
         st.divider()
 
         # 강수 확률 게이지
@@ -190,8 +193,10 @@ def show():
     with tab4:
         st.write("### 📖 원정 직관 가이드")
 
-        away_section = stadium.get('away_section', '3루 외야')
-        st.info(f"🎯 원정석 위치: **{away_section}**")
+        home_section = stadium.get('home_section', '1루 내야/외야')
+        away_section = stadium.get('away_section', '3루 내야/외야')
+        st.info(f"🏠 홈팀 응원석: **{home_section}**")
+        st.info(f"✈️ 원정팀 응원석: **{away_section}**")
 
         st.write("#### 응원 규칙")
         st.write("- 원정석에서는 홈팀 응원 금지")

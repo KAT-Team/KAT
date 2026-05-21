@@ -14,7 +14,8 @@ STADIUM_INFO = {
         "lng": 126.889,
         "capacity": 20500,
         "parking": True,
-        "away_section": "3루 외야",
+        "home_section": "3루 내야/외야",
+        "away_section": "1루 내야/외야",
     },
     "Samsung": {
         "name": "대구 삼성 라이온즈 파크",
@@ -23,7 +24,8 @@ STADIUM_INFO = {
         "lng": 128.682,
         "capacity": 24000,
         "parking": True,
-        "away_section": "3루 외야",
+        "home_section": "3루 내야/외야",
+        "away_section": "1루 내야/외야",
     },
     "LG": {
         "name": "서울종합운동장 야구장 (잠실)",
@@ -32,7 +34,8 @@ STADIUM_INFO = {
         "lng": 127.072,
         "capacity": 25000,
         "parking": True,
-        "away_section": "3루 외야",
+        "home_section": "1루 내야/외야",
+        "away_section": "3루 내야/외야",
     },
     "Doosan": {
         "name": "서울종합운동장 야구장 (잠실)",
@@ -41,7 +44,8 @@ STADIUM_INFO = {
         "lng": 127.072,
         "capacity": 25000,
         "parking": True,
-        "away_section": "1루 외야",
+        "home_section": "1루 내야/외야",
+        "away_section": "3루 내야/외야",
     },
     "KT": {
         "name": "수원 KT 위즈 파크",
@@ -50,7 +54,8 @@ STADIUM_INFO = {
         "lng": 127.009,
         "capacity": 20000,
         "parking": True,
-        "away_section": "3루 외야",
+        "home_section": "1루 내야/외야",
+        "away_section": "3루 내야/외야",
     },
     "SSG": {
         "name": "인천 SSG 랜더스 필드",
@@ -59,7 +64,8 @@ STADIUM_INFO = {
         "lng": 126.693,
         "capacity": 23000,
         "parking": True,
-        "away_section": "3루 외야",
+        "home_section": "1루 내야/외야",
+        "away_section": "3루 내야/외야",
     },
     "Lotte": {
         "name": "사직 야구장",
@@ -68,7 +74,8 @@ STADIUM_INFO = {
         "lng": 129.061,
         "capacity": 24500,
         "parking": False,
-        "away_section": "3루 외야",
+        "home_section": "1루 내야/외야",
+        "away_section": "3루 내야/외야",
     },
     "Hanwha": {
         "name": "한화생명 이글스 파크",
@@ -77,7 +84,8 @@ STADIUM_INFO = {
         "lng": 127.429,
         "capacity": 13000,
         "parking": True,
-        "away_section": "3루 외야",
+        "home_section": "1루 내야/외야",
+        "away_section": "3루 내야/외야",
     },
     "NC": {
         "name": "창원 NC 파크",
@@ -86,7 +94,8 @@ STADIUM_INFO = {
         "lng": 128.582,
         "capacity": 22112,
         "parking": True,
-        "away_section": "3루 외야",
+        "home_section": "1루 내야/외야",
+        "away_section": "3루 내야/외야",
     },
     "Kiwoom": {
         "name": "고척 스카이돔",
@@ -95,7 +104,8 @@ STADIUM_INFO = {
         "lng": 126.867,
         "capacity": 17000,
         "parking": False,
-        "away_section": "3루 외야",
+        "home_section": "1루 내야/외야",
+        "away_section": "3루 내야/외야",
     },
 }
 
