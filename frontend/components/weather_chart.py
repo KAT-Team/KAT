@@ -4,8 +4,16 @@
 - 날씨 정보 카드
 """
 
+import os
 import plotly.graph_objects as go
 import streamlit as st
+from dotenv import load_dotenv
+
+# 1. .env 파일의 내용을 환경 변수로 불러옵니다
+load_dotenv()
+
+# 2. os.getenv를 사용해 금고(env)에서 키를 꺼냅니다
+API_KEY = os.getenv("OPENWEATHER_API_KEY") # .env에 적은 변수명과 똑같아야 함
 
 
 def draw_rain_gauge(rain_prob: int) -> go.Figure:
@@ -60,3 +68,7 @@ def draw_weather_card(weather: dict) -> None:
         st.metric("💨 풍속", weather.get("wind", "정보 없음"))
         rain_prob = weather.get("rain_prob", 0)
         st.metric("☔ 강수 확률", f"{rain_prob}%")
+
+
+
+

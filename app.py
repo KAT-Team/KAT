@@ -143,7 +143,7 @@ with header_col1:
     <div style="padding-top: 10px;">
         <span style="font-size:28px;">⚾</span>
         <span class="nav-logo-text">KAT</span>
-        <div class="nav-logo-sub">KBO ALL-IN-ONE TICKET GUIDE</div>
+        <div class="nav-logo-sub">KBO ALL-IN-ONE TOOL</div>
     </div>
     """, unsafe_allow_html=True)
 
