@@ -149,7 +149,7 @@ with header_col1:
 
 with header_col2:
     # 네비게이션 버튼 가로 배치
-    btn_col1, btn_col2, btn_col3, btn_col4 = st.columns(4)
+    btn_col1, btn_col2, btn_col3, btn_col4, btn_col5 = st.columns(5)
     with btn_col1:
         if st.button("🏠 홈", use_container_width=True):
             st.session_state.page = 'home'
@@ -166,6 +166,11 @@ with header_col2:
         if st.button("🏆 구단 순위", use_container_width=True):
             st.session_state.page = 'ranking'
             st.rerun()
+    with btn_col5:
+        if st.button("🆚 승부 예측", use_container_width=True):
+            st.session_state.page = 'picks'
+            st.rerun()
+
 
 st.divider()
 
@@ -221,4 +226,8 @@ elif st.session_state.page == 'guide':
 
 elif st.session_state.page == 'ranking':
     from frontend.pages.ranking import show
+    show()
+
+elif st.session_state.page == 'picks':
+    from frontend.pages.picks import show
     show()
