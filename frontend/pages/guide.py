@@ -68,45 +68,55 @@ def show():
         "💺 좌석 가격"
     ])
 
-    # 탭 1: 날씨
+ # 탭 1: 날씨
     with tab1:
-        st.write("### 경기 당일 날씨 예보")
+        st.markdown("### 🌤️ 경기 당일 날씨 예보")
         date_str = selected_date.strftime("%Y%m%d")
         weather = get_weather(selected_team, date_str)
 
-        # 날씨 카드
-        draw_weather_card(weather)
+        # === 1. 메인 영역: 게이지 + 직관 추천 ===
+        rain_prob = weather.get("rain_prob", 0)
+        col_gauge, col_recommend = st.columns([1, 1.3])
 
-        st.write("--- API 연동 데이터 확인용 ---")
-        st.write(weather)
+        with col_gauge:
+            fig = draw_rain_gauge(rain_prob)
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col_recommend:
+            st.markdown("#### 🎯 직관 추천")
+            comment = get_weather_comment(rain_prob)
+            if rain_prob >= 70:
+                st.error(f"### 🌧️ {comment}")
+            elif rain_prob >= 40:
+                st.warning(f"### ⛅ {comment}")
+            else:
+                st.success(f"### ☀️ {comment}")
+
+            st.markdown("**📌 날씨별 준비물**")
+            if rain_prob >= 40:
+                items = ["🌂 우산 필수", "🧥 방수 재킷", "👟 방수 신발"]
+            else:
+                items = ["🕶️ 선글라스", "🧴 선크림", "🧢 모자"]
+
+            # 칩(chip) 형태로 가로 배치
+            chips_html = " ".join([
+                f'<span style="display: inline-block; background: #F5F6FA; '
+                f'border: 1px solid #E8EAF1; border-radius: 20px; '
+                f'padding: 8px 16px; margin: 4px 4px 4px 0; font-size: 14px; '
+                f'color: #2C3144; font-weight: 500;">{item}</span>'
+                for item in items
+            ])
+            st.markdown(chips_html, unsafe_allow_html=True)
 
         st.divider()
 
-        # 강수 확률 게이지
-        rain_prob = weather.get("rain_prob", 0)
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            fig = draw_rain_gauge(rain_prob)
-            st.plotly_chart(fig, use_container_width=True)
-        with col2:
-            st.write("### 직관 추천")
-            comment = get_weather_comment(rain_prob)
-            if rain_prob >= 70:
-                st.error(comment)
-            elif rain_prob >= 40:
-                st.warning(comment)
-            else:
-                st.success(comment)
+        # === 2. 상세 날씨 정보 카드 ===
+        st.markdown("#### 📊 상세 날씨 정보")
+        draw_weather_card(weather)
 
-            st.write("#### 날씨별 준비물")
-            if rain_prob >= 40:
-                st.write("- 🌂 우산 필수")
-                st.write("- 🧥 방수 재킷")
-                st.write("- 👟 방수 신발")
-            else:
-                st.write("- 🕶️ 선글라스")
-                st.write("- 🧴 선크림")
-                st.write("- 🧢 모자")
+        # === 3. 디버그 정보 (개발용) ===
+        st.write("--- API 연동 데이터 확인용 ---")
+        st.write(weather)
 
     # 탭 2: 교통/주차
     with tab2:
