@@ -10,7 +10,6 @@ import pandas as pd
 import streamlit as st
 from backend.data.collect import TEAMS
 
-# 구단별 색상
 TEAM_COLORS = {
     "KIA":     "#EA0029",
     "Samsung": "#074CA1",
@@ -49,7 +48,6 @@ def draw_schedule_table(schedule_df: pd.DataFrame) -> None:
     weeks = ['월', '화', '수', '목', '금', '토', '일']
     LOGO_DIR = "frontend/assets"
 
-    # 💡 st.image 컴포넌트를 컬럼 내부에서 무조건 가운데 정렬시키는 CSS 주입
     st.markdown(
         """
         <style>
@@ -64,23 +62,16 @@ def draw_schedule_table(schedule_df: pd.DataFrame) -> None:
         unsafe_allow_html=True
     )
 
-    # ==========================================================
-    # 💡 [핵심 도입] 구글 스타일 하단 페이지 번호용 계산
-    # ==========================================================
     ITEMS_PER_PAGE = 20  # 한 화면에 보여줄 경기 수 (버튼 수에 맞춰 20개로 상향 조정)
     total_games = len(schedule_df)
     total_pages = max(((total_games - 1) // ITEMS_PER_PAGE) + 1, 1)
 
-    # 현재 선택된 페이지를 저장할 세션 상태 초기화 (기본값: 1페이지)
     if "current_page" not in st.session_state:
         st.session_state.current_page = 1
 
-    # 안전장치: 전체 페이지 수가 줄어들었을 경우 현재 페이지 조정
     if st.session_state.current_page > total_pages:
         st.session_state.current_page = total_pages
-    # ==========================================================
 
-    # 상단에 "현재 페이지 데이터" 슬라이싱
     start_row = (st.session_state.current_page - 1) * ITEMS_PER_PAGE
     end_row = start_row + ITEMS_PER_PAGE
     page_df = schedule_df.iloc[start_row:end_row]
@@ -141,26 +132,20 @@ def draw_schedule_table(schedule_df: pd.DataFrame) -> None:
 
             st.divider()
 
-    # ==========================================================
-    # 💡 [핵심 도입] 하단 구글 스타일 페이지네이션 버튼 바
-    # ==========================================================
-    st.write("")  # 테이블과의 간격 확보
+    st.write("")
 
-    # 버튼들을 가로로 나열하기 위해 페이지 수만큼 컬럼을 생성합니다.
-    # 양옆 여백을 주어 정중앙에 예쁘게 모이도록 빈 컬럼(spacer)을 배치합니다.
     spacer_left, *btn_cols, spacer_right = st.columns([3] + [1] * total_pages + [3])
 
     for i, col in enumerate(btn_cols):
         page_num = i + 1
         with col:
-            # 현재 선택된 페이지는 눈에 띄게 'primary' 테마 색상을 적용합니다.
             is_current = (page_num == st.session_state.current_page)
             btn_type = "primary" if is_current else "secondary"
 
             # 숫자 버튼 생성
             if st.button(f"{page_num}", key=f"page_btn_{page_num}", type=btn_type, use_container_width=True):
                 st.session_state.current_page = page_num
-                st.rerun()  # 페이지 번호가 바뀌었으므로 즉시 화면 재렌더링
+                st.rerun()
 
 
 def draw_monthly_chart(schedule_df: pd.DataFrame) -> go.Figure:
