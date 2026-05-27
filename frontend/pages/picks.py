@@ -158,7 +158,7 @@ def show():
                     f"</div>",
                     unsafe_allow_html=True
                 )
-                st.markdown("<p style='text-align: center; font-size: 10px; color: #A0AEC0; margin-top: -3px; margin-bottom: 0;'>예측 현황 / 리워드</p>", unsafe_allow_html=True)
+                st.markdown("<p style='text-align: center; font-size: 10px; color: #A0AEC0; margin-top: -3px; margin-bottom: 0;'>성적 기반 승률 예측 / 리워드</p>", unsafe_allow_html=True)
 
             with col_home:
                 c_h3, c_h2, c_h1 = st.columns([10, 1, 1])
