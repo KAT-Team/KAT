@@ -54,3 +54,5 @@ logs/
 .coverage
 htmlcov/
 .pytest_cache/
+!kbo_schedule.json
+!kbo_schedule.json
