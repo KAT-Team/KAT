@@ -16,8 +16,10 @@ from backend.data.weather import get_weather, get_weather_comment
 from frontend.components.weather_chart import draw_rain_gauge, draw_weather_card
 from frontend.components.seat_chart import draw_seat_price_chart
 import streamlit.components.v1 as components
+from pathlib import Path
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+load_dotenv(dotenv_path=BASE_DIR / 'backend' / '.env')
 KAKAO_MAP_API_KEY = os.getenv("KAKAO_MAP_API_KEY")
 
 

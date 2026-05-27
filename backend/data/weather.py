@@ -16,18 +16,31 @@ load_dotenv(dotenv_path=BASE_DIR / 'backend' / '.env')
 WEATHER_API_KEY: str = os.getenv("WEATHER_API_KEY") or ""
 WEATHER_API_URL: str = os.getenv("WEATHER_API_URL") or ""
 
+# 팀명 → 구장명 매핑
+TEAM_TO_STADIUM = {
+    "KIA":     "광주",
+    "Samsung": "대구",
+    "LG":      "잠실",
+    "Doosan":  "잠실",
+    "KT":      "수원",
+    "SSG":     "문학",
+    "Lotte":   "사직",
+    "Hanwha":  "대전",
+    "NC":      "창원",
+    "Kiwoom":  "고척"
+}
+
 # 경기장별 기상청 격자 좌표 (nx, ny)
 STADIUM_GRID = {
-    "KIA":     {"nx": 58, "ny": 74},
-    "Samsung": {"nx": 89, "ny": 90},
-    "LG":      {"nx": 61, "ny": 126},
-    "Doosan":  {"nx": 61, "ny": 126},
-    "KT":      {"nx": 60, "ny": 121},
-    "SSG":     {"nx": 54, "ny": 124},
-    "Lotte":   {"nx": 98, "ny": 76},
-    "Hanwha":  {"nx": 67, "ny": 100},
-    "NC":      {"nx": 90, "ny": 79},
-    "Kiwoom":  {"nx": 58, "ny": 125},
+    "잠실": {"nx": 62, "ny": 126, "desc": "LG/두산 (서울 송파구)"},
+    "고척": {"nx": 58, "ny": 125, "desc": "키움 (서울 구로구)"},
+    "문학": {"nx": 55, "ny": 124, "desc": "SSG (인천 미추홀구)"},
+    "수원": {"nx": 60, "ny": 121, "desc": "KT (경기 수원 장안구)"},
+    "대전": {"nx": 68, "ny": 100, "desc": "한화 (대전 중구)"},
+    "광주": {"nx": 58, "ny": 74,  "desc": "KIA (광주 북구)"},
+    "대구": {"nx": 89, "ny": 90,  "desc": "삼성 (대구 수성구)"},
+    "창원": {"nx": 89, "ny": 77,  "desc": "NC (경남 창원 마산회원구)"},
+    "사직": {"nx": 98, "ny": 76,  "desc": "롯데 (부산 동래구)"}
 }
 
 # 하늘 상태 코드
@@ -77,7 +90,8 @@ def get_weather(team: str, date: str) -> dict:
     if not WEATHER_API_KEY:
         return _get_mock_weather()
 
-    grid = STADIUM_GRID.get(team, {"nx": 60, "ny": 127})
+    stadium = TEAM_TO_STADIUM.get(team, "잠실")
+    grid = STADIUM_GRID.get(stadium, {"nx": 61, "ny": 126})
     now = datetime.now()
     base_date, base_time = _get_base_time(now)
 
