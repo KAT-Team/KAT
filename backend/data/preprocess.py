@@ -20,7 +20,7 @@ def preprocess_schedule(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
     # 날짜 형식 통일
-    df['date'] = pd.to_datetime(df['date'])
+    df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d', errors='coerce')
 
     # 요일 추가
     df['weekday'] = df['date'].dt.day_name(locale='ko_KR').str[:1]
