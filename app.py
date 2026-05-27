@@ -88,15 +88,6 @@ header[data-testid="stHeader"] { display: none !important; }
     margin-bottom: 48px;
 }
 
-/* 카드 스타일 */
-.feature-card {
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-radius: 16px;
-    padding: 32px 24px;
-    text-align: center;
-}
-
 .feature-title {
     font-family: 'Black Han Sans', sans-serif;
     font-size: 20px;
@@ -121,11 +112,13 @@ h1, h2, h3, h4 { color: #1E293B !important; }
     color: #475569 !important;
     border: 1px solid #E2E8F0 !important;
     border-radius: 8px !important;
+    padding: 16px 24px;
 }
 .stButton > button:hover {
     border-color: #E8A020 !important;
     color: #E8A020 !important;
 }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -143,13 +136,13 @@ with header_col1:
     <div style="padding-top: 10px;">
         <span style="font-size:28px;">⚾</span>
         <span class="nav-logo-text">KAT</span>
-        <div class="nav-logo-sub">KBO ALL-IN-ONE TICKET GUIDE</div>
+        <div class="nav-logo-sub">KBO ALL-IN-ONE TOOL</div>
     </div>
     """, unsafe_allow_html=True)
 
 with header_col2:
     # 네비게이션 버튼 가로 배치
-    btn_col1, btn_col2, btn_col3, btn_col4 = st.columns(4)
+    btn_col1, btn_col2, btn_col3, btn_col4, btn_col5 = st.columns(5)
     with btn_col1:
         if st.button("🏠 홈", use_container_width=True):
             st.session_state.page = 'home'
@@ -166,6 +159,10 @@ with header_col2:
         if st.button("🏆 구단 순위", use_container_width=True):
             st.session_state.page = 'ranking'
             st.rerun()
+    with btn_col5:
+        if st.button("🆚 승부 예측", use_container_width=True):
+            st.session_state.page = 'picks'
+            st.rerun()
 
 st.divider()
 
@@ -181,17 +178,29 @@ if st.session_state.page == 'home':
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # 기능 카드 (3열 가로 배치)
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown('<div class="feature-card"><h3>📅 경기 일정</h3><p>KBO 10개 구단 일정을 확인하세요.</p></div>', unsafe_allow_html=True)
-    with col2:
-        st.markdown('<div class="feature-card"><h3>🧭 직관 도우미</h3><p>날씨, 교통 가이드 완벽 지원</p></div>', unsafe_allow_html=True)
-    with col3:
-        st.markdown('<div class="feature-card"><h3>🏆 구단 순위</h3><p>실시간 KBO 순위표 확인</p></div>', unsafe_allow_html=True)
+    # 1행: 경기 일정 & 직관 도우미
+    row1_col1, row1_col2 = st.columns(2)
+    with row1_col1:
+        if st.button("📅 경기 일정\n\nKBO 10개 구단 일정을 확인하세요.", use_container_width=True):
+            st.session_state.page = 'schedule'
+            st.rerun()
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.subheader("오늘의 경기")
+    with row1_col2:
+        if st.button("🧭 직관 도우미\n\n날씨, 교통 가이드 완벽 지원", use_container_width=True):
+            st.session_state.page = 'guide'
+            st.rerun()
+
+    # 2행: 구단 순위 & 승부 예측
+    row2_col1, row2_col2 = st.columns(2)
+    with row2_col1:
+        if st.button("🏆 구단 순위\n\n실시간 KBO 순위표 확인", use_container_width=True):
+            st.session_state.page = 'ranking'
+            st.rerun()
+
+    with row2_col2:
+        if st.button("🆚 승부 예측\n\n실시간 투표율 연동 리워드 예측", use_container_width=True):
+            st.session_state.page = 'picks'
+            st.rerun()
 
     try:
         # collect.py에서 데이터 가져오기
@@ -221,4 +230,8 @@ elif st.session_state.page == 'guide':
 
 elif st.session_state.page == 'ranking':
     from frontend.pages.ranking import show
+    show()
+
+elif st.session_state.page == 'picks':
+    from frontend.pages.picks import show
     show()
