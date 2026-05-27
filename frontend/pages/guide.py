@@ -57,7 +57,7 @@ def show():
         st.info(f"🚗 {parking}")
     with col3:
         ticket_url = get_ticket_link(selected_team)
-        st.markdown(f"🎟️ [티켓 예매 바로가기]({ticket_url})")
+        st.markdown(f"🎟️ <a href='{ticket_url}' target='_blank'>티켓 예매 바로가기</a>", unsafe_allow_html=True)
 
     st.divider()
 
@@ -246,4 +246,4 @@ def show():
         st.divider()
         ticket_url = get_ticket_link(selected_team)
         team_name = TEAMS.get(selected_team, selected_team)
-        st.markdown(f"### 🎟️ [{team_name} 티켓 예매 바로가기]({ticket_url})")
+        st.markdown(f"### 🎟️ <a href='{ticket_url}' target='_blank'>{team_name} 티켓 예매 바로가기</a>", unsafe_allow_html=True)
