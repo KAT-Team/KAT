@@ -47,7 +47,7 @@ def show():
         st.error("경기장 정보를 불러올 수 없습니다.")
         return
 
-    # 경기장 기본 정보
+   # 경기장 기본 정보
     st.subheader(f"📍 {stadium.get('name', '')}")
     col1, col2, col3 = st.columns(3)
     with col1:
