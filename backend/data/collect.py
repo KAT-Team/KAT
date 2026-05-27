@@ -25,15 +25,15 @@ TEAMS = {
 # 구단별 예매 링크
 TICKET_LINKS = {
         "KIA": "https://www.ticketlink.co.kr/sports/137/58",
-        "삼성": "https://www.ticketlink.co.kr/sports/137/57",
+        "Samsung": "https://www.ticketlink.co.kr/sports/137/57",
         "LG": "https://www.ticketlink.co.kr/sports/137/59",
-        "두산": "https://ticket.interpark.com/Contents/Sports/GoodsInfo?SportsCode=07001&TeamCode=PB004",
+        "Doosan": "https://ticket.interpark.com/Contents/Sports/GoodsInfo?SportsCode=07001&TeamCode=PB004",
         "KT": "https://www.ticketlink.co.kr/sports/137/62",
         "SSG": "https://ticket.ssg.com/ticket",
-        "롯데": "https://ticket.giantsclub.com/loginForm.do",
-        "한화": "https://www.ticketlink.co.kr/sports/137/63",
+        "Lotte": "https://ticket.giantsclub.com/loginForm.do",
+        "Hanwha": "https://www.ticketlink.co.kr/sports/137/63",
         "NC": "https://www.ncdinos.com/auth/ticket.do",
-        "키움": "https://ticket.interpark.com/Contents/Sports/GoodsInfo?SportsCode=07001&TeamCode=PB003"
+        "Kiwoom": "https://ticket.interpark.com/Contents/Sports/GoodsInfo?SportsCode=07001&TeamCode=PB003"
     }
 
 # CSV 파일 경로
