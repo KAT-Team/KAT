@@ -47,7 +47,7 @@ def show():
         st.error("경기장 정보를 불러올 수 없습니다.")
         return
 
-    # 경기장 기본 정보
+   # 경기장 기본 정보
     st.subheader(f"📍 {stadium.get('name', '')}")
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -57,7 +57,7 @@ def show():
         st.info(f"🚗 {parking}")
     with col3:
         ticket_url = get_ticket_link(selected_team)
-        st.markdown(f"🎟️ [티켓 예매 바로가기]({ticket_url})")
+        st.info(f"🎟️ [티켓 예매 바로가기]({ticket_url})")
 
     st.divider()
 
