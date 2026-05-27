@@ -1,5 +1,7 @@
+import os
+import json
 import streamlit as st
-from datetime import datetime
+import pandas as pd
 
 # 1. 페이지 설정
 st.set_page_config(
@@ -8,6 +10,10 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
+# [JSON 경로 정의] 프로젝트 구조에 맞게 수정 가능합니다.
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+JSON_PATH = os.path.join(BASE_DIR, "kbo_schedule.json")
 
 # 2. 전체 스타일 (라이트 모드 유지)
 st.markdown("""
@@ -127,11 +133,9 @@ if 'page' not in st.session_state:
     st.session_state.page = 'home'
 
 # --- 3. 상단 가로형 배너 구성 ---
-# 로고와 네비게이션 버튼을 한 줄(columns)로 배치
 header_col1, header_col2 = st.columns([1, 2])
 
 with header_col1:
-    # 로고 부분
     st.markdown("""
     <div style="padding-top: 10px;">
         <span style="font-size:28px;">⚾</span>
@@ -141,7 +145,6 @@ with header_col1:
     """, unsafe_allow_html=True)
 
 with header_col2:
-    # 네비게이션 버튼 가로 배치
     btn_col1, btn_col2, btn_col3, btn_col4, btn_col5 = st.columns(5)
     with btn_col1:
         if st.button("🏠 홈", use_container_width=True):
@@ -202,22 +205,112 @@ if st.session_state.page == 'home':
             st.session_state.page = 'picks'
             st.rerun()
 
+    st.markdown("### 🏟️ 오늘 예정된 경기")
+
+    LOGO_MAPPING = {
+        "KIA": "logo_kia.svg",
+        "키움": "logo_kiwoom.svg",
+        "한화": "logo_hanwha.svg",
+        "NC": "logo_nc.svg",
+        "삼성": "logo_samsung.svg",
+        "SSG": "logo_ssg.svg",
+        "KT": "logo_kt.svg",
+        "두산": "logo_doosan.svg",
+        "LG": "logo_lg.svg",
+        "롯데": "logo_lotte.svg"
+    }
+
     try:
-        # collect.py에서 데이터 가져오기
-        from backend.data.collect import get_today_games, TEAMS
-        today_games = get_today_games()
-        if today_games.empty:
-            st.info("오늘 예정된 경기가 없습니다.")
+        import base64  # [추가] 이미지를 HTML에 직접 주입하기 위한 라이브러리
+
+        now = pd.Timestamp.now()
+        weekday_dict = {0: "월", 1: "화", 2: "수", 3: "목", 4: "금", 5: "토", 6: "일"}
+
+        today_month = str(int(now.strftime("%m")))
+        today_day = now.strftime("%m.%d")
+        today_week = weekday_dict[now.weekday()]
+        target_date_str = f"{today_month}월 {today_day}({today_week})"
+
+        if os.path.exists(JSON_PATH):
+            with open(JSON_PATH, 'r', encoding='utf-8') as f:
+                all_games = json.load(f)
+
+            today_games = [game for game in all_games if game.get("날짜") == target_date_str]
+
+            if not today_games:
+                st.info("오늘 예정된 경기가 없습니다.")
+            else:
+                cols = st.columns(5)
+
+                for i, game in enumerate(today_games):
+                    with cols[i % 5]:
+                        match_info = game.get("경기", "정보 없음")
+                        time_info = game.get("시간", "-")
+                        stadium_info = game.get("구장", "-")
+
+                        # 팀명 분리
+                        if "vs" in match_info:
+                            away_team, home_team = [team.strip() for team in match_info.split("vs")]
+                        elif "VS" in match_info:
+                            away_team, home_team = [team.strip() for team in match_info.split("VS")]
+                        else:
+                            away_team, home_team = match_info, ""
+
+                        # 매핑 파일명 확인
+                        away_filename = LOGO_MAPPING.get(away_team, "")
+                        home_filename = LOGO_MAPPING.get(home_team, "")
+
+                        # 실제 파일 경로 조립
+                        away_local_path = os.path.join(BASE_DIR, "frontend", "assets", away_filename) if away_filename else ""
+                        home_local_path = os.path.join(BASE_DIR, "frontend", "assets", home_filename) if home_filename else ""
+
+                        # 1. 원정팀 Base64 인코딩
+                        away_src = ""
+                        if away_local_path and os.path.exists(away_local_path):
+                            with open(away_local_path, "rb") as f_img:
+                                away_src = f"data:image/svg+xml;base64,{base64.b64encode(f_img.read()).decode()}"
+
+                        # 2. 홈팀 Base64 인코딩
+                        home_src = ""
+                        if home_local_path and os.path.exists(home_local_path):
+                            with open(home_local_path, "rb") as f_img:
+                                home_src = f"data:image/svg+xml;base64,{base64.b64encode(f_img.read()).decode()}"
+
+                        # [최종 해결] Streamlit이 무조건 HTML로 인식하는 테이블 구조로 변경
+                        # 높이 500px 원본 로고를 35px 크기로 선명하게 축소하여 정중앙에 수평 정렬합니다.
+                        st.markdown(f"""
+                        <table style="width:100%; border-collapse:collapse; background-color:#ffffff; border:1px solid #E2E8F0; border-radius:8px; text-align:center; margin-bottom:10px;">
+                            <tr style="height:45px;">
+                                <td style="width:42%; vertical-align:middle; padding-top:10px;">
+                                    <img src="{away_src}" style="height:35px; width:auto; max-width:100%; object-fit:contain; display:block; margin:0 auto;">
+                                </td>
+                                <td rowspan="2" style="width:16%; vertical-align:middle; font-size:11px; color:#94A3B8; font-weight:800; padding-top:10px;">
+                                    VS
+                                </td>
+                                <td style="width:42%; vertical-align:middle; padding-top:10px;">
+                                    <img src="{home_src}" style="height:35px; width:auto; max-width:100%; object-fit:contain; display:block; margin:0 auto;">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="font-size:13px; color:#475569; font-weight:700; padding-bottom:10px; white-space:nowrap;">
+                                    {away_team}
+                                </td>
+                                <td style="font-size:13px; color:#475569; font-weight:700; padding-bottom:10px; white-space:nowrap;">
+                                    {home_team}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" style="font-size:12px; color:#64748B; border-top:1px dashed #E2E8F0; padding:6px 0; background-color:#fafafa;">
+                                    {stadium_info} <span style="color:#E8A020; font-weight:600;">({time_info})</span>
+                                </td>
+                            </tr>
+                        </table>
+                        """, unsafe_allow_html=True)
         else:
-            for _, game in today_games.iterrows():
-                home = TEAMS.get(game['home_team'], game['home_team'])
-                away = TEAMS.get(game['away_team'], game['away_team'])
-                st.markdown(f"""
-                <div class="game-card">
-                    <span style="font-weight:700;">{away} VS {home}</span> | 📍 {game['stadium']} ({game['time']})
-                </div>
-                """, unsafe_allow_html=True)
-    except Exception:
+            st.error("경기 일정 데이터 파일(JSON)을 찾을 수 없습니다.")
+
+    except Exception as e:
+        print(f"로고 렌더링 최종 에러: {e}")
         st.info("경기 데이터를 불러오는 중입니다.")
 
 elif st.session_state.page == 'schedule':
