@@ -23,7 +23,11 @@ def preprocess_schedule(df: pd.DataFrame) -> pd.DataFrame:
     df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d', errors='coerce')
 
     # 요일 추가
-    df['weekday'] = df['date'].dt.day_name(locale='ko_KR').str[:1]
+    weekday_map = {
+    'Monday': '월', 'Tuesday': '화', 'Wednesday': '수',
+    'Thursday': '목', 'Friday': '금', 'Saturday': '토', 'Sunday': '일'
+}
+    df['weekday'] = df['date'].dt.day_name().map(weekday_map)
 
     # 날짜 표시용 문자열 추가 (예: 05/01 (목))
     df['date_str'] = df['date'].dt.strftime('%m/%d') + ' (' + df['weekday'] + ')'
