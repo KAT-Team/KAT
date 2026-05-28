@@ -113,7 +113,24 @@ def get_weather(team: str, date: str) -> dict:
 
         # 예보 날짜 필터링
         target_date = date if date else datetime.now().strftime("%Y%m%d")
-        target_items = [i for i in items if i['fcstDate'] == target_date]
+        now_hour = now.strftime("%H")
+        # 현재 시각에서 가장 가까운 예보 시간 찾기
+        available_times = sorted(set([
+            i['fcstTime'] for i in items
+            if i['fcstDate'] == target_date
+        ]))
+        # 현재 시각 이후 가장 가까운 시간 선택
+        target_time = available_times[0]
+        for t in available_times:
+            if int(t[:2]) >= int(now_hour):
+                target_time = t
+                break
+
+        target_items = [
+            i for i in items
+            if i['fcstDate'] == target_date and i['fcstTime'] == target_time
+        ]
+        print(f"날씨 조회 시간: {target_date} {target_time}")
 
         weather = {}
         for item in target_items:
