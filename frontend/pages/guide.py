@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from backend.data.collect import TEAMS, get_ticket_link
 from backend.data.stadium import get_stadium_info, get_seat_prices
 from backend.data.weather import get_weather, get_weather_comment
-from frontend.components.weather_chart import draw_rain_gauge, draw_weather_card
+from frontend.components.weather_chart import draw_weather_card
 from frontend.components.seat_chart import draw_seat_price_chart
 import streamlit.components.v1 as components
 from pathlib import Path
@@ -24,6 +24,12 @@ KAKAO_MAP_API_KEY = os.getenv("KAKAO_MAP_API_KEY")
 
 
 def show():
+    st.markdown("""
+     <style>
+     h1 a, h2 a, h3 a, h4 a { display: none !important; }
+     </style>
+     """, unsafe_allow_html=True)
+
     st.header("🧭 직관 도우미")
     st.write("경기장 날씨, 교통, 준비물 정보를 한 번에 확인하세요!")
 
@@ -57,9 +63,28 @@ def show():
         st.info(f"🚗 {parking}")
     with col3:
         ticket_url = get_ticket_link(selected_team)
-        st.markdown(f"🎟️ <a href='{ticket_url}' target='_blank'>티켓 예매 바로가기</a>", unsafe_allow_html=True)
-
-    st.divider()
+    st.markdown(f"""
+    <div style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        min-height: 68px;
+        background-color: #f0f2f6;
+        border-radius: 8px;
+        padding: 8px 16px;
+    ">
+        <a href='{ticket_url}' target='_blank' style="
+            color: #E8A020 !important;
+            font-size: 18px;
+            font-weight: 700;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        ">
+            🎟️ 티켓 예매 바로가기
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
 
     # 탭 구성
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -81,8 +106,18 @@ def show():
         col_gauge, col_recommend = st.columns([1, 1.3])
 
         with col_gauge:
-            fig = draw_rain_gauge(rain_prob)
-            st.plotly_chart(fig, use_container_width=True)
+            st.markdown(f"""
+            <div style="
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 200px;
+            ">
+                <div style="font-size: 80px; font-weight: bold; color: #1f4e79;">{rain_prob}%</div>
+                <div style="color: #888; font-size: 15px; margin-top: 8px;">강수 확률</div>
+            </div>
+            """, unsafe_allow_html=True)
 
         with col_recommend:
             st.markdown("#### 🎯 직관 추천")
@@ -96,9 +131,9 @@ def show():
 
             st.markdown("**📌 날씨별 준비물**")
             if rain_prob >= 40:
-                items = ["🌂 우산 필수", "🧥 방수 재킷", "👟 방수 신발"]
+                items = ["🌂 우산", "🧥 우비"]
             else:
-                items = ["🕶️ 선글라스", "🧴 선크림", "🧢 모자"]
+                items = ["🧴 선크림", "🧢 모자", "🌀 손선풍기"]
 
             # 칩(chip) 형태로 가로 배치
             chips_html = " ".join([
@@ -115,10 +150,6 @@ def show():
         # === 2. 상세 날씨 정보 카드 ===
         st.markdown("#### 📊 상세 날씨 정보")
         draw_weather_card(weather)
-
-        # === 3. 디버그 정보 (개발용) ===
-        st.write("--- API 연동 데이터 확인용 ---")
-        st.write(weather)
 
     # 탭 2: 교통/주차
     with tab2:
@@ -246,4 +277,3 @@ def show():
         st.divider()
         ticket_url = get_ticket_link(selected_team)
         team_name = TEAMS.get(selected_team, selected_team)
-        st.markdown(f"### 🎟️ <a href='{ticket_url}' target='_blank'>{team_name} 티켓 예매 바로가기</a>", unsafe_allow_html=True)
