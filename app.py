@@ -128,46 +128,72 @@ h1, h2, h3, h4 { color: #1E293B !important; }
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+/* 네비게이션 버튼 고정 크기 */
+div[data-testid="column"] > div > div > div > button {
+    white-space: nowrap !important;
+    height: 60px !important;
+    font-size: 14px !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # 세션 상태로 현재 페이지 관리
-if 'page' not in st.session_state:
+params = st.query_params
+if 'page' in params:
+    st.session_state.page = params['page']
+elif 'page' not in st.session_state:
     st.session_state.page = 'home'
 
 # --- 3. 상단 가로형 배너 구성 ---
-header_col1, header_col2 = st.columns([1, 2])
+header_col1, header_col2 = st.columns([1, 4])
 
 with header_col1:
     st.markdown("""
-    <div style="padding-top: 10px;">
+    <div style="
+        display: flex;
+        align-items: center;
+        padding: 10px 0;
+        gap: 12px;
+    ">
         <span style="font-size:28px;">⚾</span>
-        <span class="nav-logo-text">KAT</span>
-        <div class="nav-logo-sub">KBO ALL-IN-ONE TOOL</div>
+        <div>
+            <span class="nav-logo-text">KAT</span>
+            <div class="nav-logo-sub">KBO ALL-IN-ONE TOOL</div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-with header_col2:
-    btn_col1, btn_col2, btn_col3, btn_col4, btn_col5 = st.columns(5)
-    with btn_col1:
-        if st.button("🏠 홈", use_container_width=True):
-            st.session_state.page = 'home'
-            st.rerun()
-    with btn_col2:
-        if st.button("📅 경기 일정", use_container_width=True):
-            st.session_state.page = 'schedule'
-            st.rerun()
-    with btn_col3:
-        if st.button("🧭 직관 도우미", use_container_width=True):
-            st.session_state.page = 'guide'
-            st.rerun()
-    with btn_col4:
-        if st.button("🏆 구단 순위", use_container_width=True):
-            st.session_state.page = 'ranking'
-            st.rerun()
-    with btn_col5:
-        if st.button("🆚 승부 예측", use_container_width=True):
-            st.session_state.page = 'picks'
-            st.rerun()
+    # 네비게이션 버튼
+    with header_col2:
+        btn_col1, btn_col2, btn_col3, btn_col4, btn_col5 = st.columns(5)
+        with btn_col1:
+            if st.button("🏠 홈", use_container_width=True):
+                st.session_state.page = 'home'
+                st.query_params['page'] = 'home'
+                st.rerun()
+        with btn_col2:
+            if st.button("📅 경기 일정", use_container_width=True):
+                st.query_params['page'] = 'schedule'
+                st.rerun()
+        with btn_col3:
+            if st.button("🧭 직관도우미", use_container_width=True):
+                st.query_params['page'] = 'guide'
+                st.rerun()
+        with btn_col4:
+            if st.button("🏆 구단 순위", use_container_width=True):
+                st.query_params['page'] = 'ranking'
+                st.rerun()
+        with btn_col5:
+            if st.button("🆚 승부 예측", use_container_width=True):
+                st.query_params['page'] = 'picks'
+                st.rerun()
 
-st.divider()
+        st.divider()
 
 # 4. 페이지 라우팅
 if st.session_state.page == 'home':
