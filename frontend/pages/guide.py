@@ -14,7 +14,7 @@ from backend.data.collect import TEAMS, get_ticket_link
 from backend.data.stadium import get_stadium_info, get_seat_prices
 from backend.data.weather import get_weather, get_weather_comment
 from frontend.components.weather_chart import draw_weather_card
-from frontend.components.seat_chart import draw_seat_price_chart
+from frontend.components.seat_chart import draw_seat_price_table
 import streamlit.components.v1 as components
 from pathlib import Path
 
@@ -261,18 +261,39 @@ def show():
 
     # 탭 5: 좌석 가격
     with tab5:
-        st.write("### 💺 좌석 등급별 가격")
-        prices = get_seat_prices(selected_team)
+        st.write("### 💺 좌석 가격 (성인 1인 기준)")
+        draw_seat_price_table(selected_team)
 
-        if prices:
-            fig = draw_seat_price_chart(selected_team)
-            st.plotly_chart(fig, use_container_width=True)
+        st.divider()
+        st.write("#### 🗺️ 좌석 배치도")
 
-            st.write("#### 좌석 가격표")
-            for seat, price in prices.items():
-                st.write(f"- **{seat}**: {price:,}원")
+        team_to_map = {
+            "KIA":     "KIA_seat",
+            "Samsung": "SAMSUNG_seat",
+            "LG":      "DOOSAN LG_seat",
+            "Doosan":  "DOOSAN LG_seat",
+            "KT":      "KT_seat",
+            "SSG":     "SSG_seat",
+            "Lotte":   "LOTTE_seat",
+            "Hanwha":  "HANHWA_seat",
+            "NC":      "NC_seat",
+            "Kiwoom":  "KIWOOM_seat",
+        }
+
+        map_filename = team_to_map.get(selected_team)
+        map_path = None
+
+        if map_filename:
+            for ext in [".webp", ".png", ".jpg", ".jpeg"]:
+                candidate = Path(BASE_DIR) / "frontend" / "assets" / "stadium_maps" / f"{map_filename}{ext}"
+                if candidate.exists():
+                    map_path = candidate
+                    break
+
+        if map_path:
+            st.image(str(map_path), use_container_width=True)
         else:
-            st.info("좌석 가격 정보를 준비 중입니다.")
+            st.caption("좌석 배치도를 준비 중입니다.")
 
         st.divider()
         ticket_url = get_ticket_link(selected_team)
