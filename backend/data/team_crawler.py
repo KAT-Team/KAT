@@ -52,7 +52,7 @@ def crawl_team_ranking() -> dict:
 
         for row in rows:
             cols = row.find_all("td")
-            if len(cols) < 10:
+            if len(cols) < 12:
                 continue
 
             rank = int(cols[0].text.strip())
@@ -63,6 +63,10 @@ def crawl_team_ranking() -> dict:
             win_rate = float(cols[6].text.strip())
             recent_10 = cols[8].text.strip()
             streak = cols[9].text.strip()
+            home_record = cols[10].text.strip()    # 추가: 홈 기록 예) "20승5패"
+            away_record = cols[11].text.strip()    # 추가: 원정 기록
+            home_win_rate = _parse_win_rate(home_record)
+            away_win_rate = _parse_win_rate(away_record)
             team_eng = TEAM_NAME_KR.get(team_kr, team_kr)
             recent_5 = _parse_recent_results(recent_10)
 
@@ -75,7 +79,11 @@ def crawl_team_ranking() -> dict:
                 "win_rate": win_rate,
                 "recent_10": recent_10,
                 "recent_5": recent_5,
-                "streak": streak
+                "streak": streak,
+                "home_record": home_record,      # 추가
+                "away_record": away_record,      # 추가
+                "home_win_rate": home_win_rate,  # 추가
+                "away_win_rate": away_win_rate,  # 추가
             }
 
         return ranking
@@ -84,6 +92,19 @@ def crawl_team_ranking() -> dict:
         print(f"팀 순위 크롤링 오류: {e}")
         return {}
 
+def _parse_win_rate(record: str) -> float:
+    """
+    "20승5패2무" 형태 문자열에서 승률 계산
+    """
+    try:
+        parts = record.split("-")
+        w = int(parts[0])
+        d = int(parts[1])
+        l = int(parts[2])
+        total = w + l
+        return round(w / total, 3) if total > 0 else 0.5
+    except:
+        return 0.5
 
 def crawl_team_batting() -> dict:
     """
@@ -105,17 +126,33 @@ def crawl_team_batting() -> dict:
 
         for row in rows:
             cols = row.find_all("td")
-            if len(cols) < 10:
+            if len(cols) < 16:
                 continue
 
             team_kr = cols[1].text.strip()
             avg = float(cols[2].text.strip())
+            ab = int(cols[4].text.strip())
+            runs = int(cols[5].text.strip())
+            hits = int(cols[6].text.strip())
             hr = int(cols[9].text.strip())
+            tb = int(cols[10].text.strip())
+            bb = int(cols[14].text.strip())
+            hbp = int(cols[15].text.strip())
             team_eng = TEAM_NAME_KR.get(team_kr, team_kr)
+
+            # OBP = (H + BB + HBP) / (AB + BB + HBP)
+            obp = (hits + bb + hbp) / (ab + bb + hbp) if (ab + bb + hbp) > 0 else 0
+            # SLG = TB / AB
+            slg = tb / ab if ab > 0 else 0
+            # OPS = OBP + SLG
+            ops = round(obp + slg, 3)
+
 
             batting[team_eng] = {
                 "avg": avg,
                 "hr": hr,
+                "runs": runs,
+                "ops": ops,
                 "avg_display": f".{str(avg).split('.')[1][:3]}" if '.' in str(avg) else str(avg)
             }
 
@@ -146,16 +183,18 @@ def crawl_team_pitching() -> dict:
 
         for row in rows:
             cols = row.find_all("td")
-            if len(cols) < 3:
+            if len(cols) < 19:
                 continue
 
             team_kr = cols[1].text.strip()
             era = float(cols[2].text.strip())
+            runs_allowed = int(cols[18].text.strip())
             team_eng = TEAM_NAME_KR.get(team_kr, team_kr)
 
             pitching[team_eng] = {
                 "era": era,
-                "era_display": str(era)
+                "era_display": str(era),
+                "runs_allowed": runs_allowed
             }
 
         return pitching
