@@ -136,6 +136,7 @@ def crawl_team_batting() -> dict:
             hits = int(cols[6].text.strip())
             hr = int(cols[9].text.strip())
             tb = int(cols[10].text.strip())
+            team_rbi = int(cols[11].text.strip())
             bb = int(cols[14].text.strip())
             hbp = int(cols[15].text.strip())
             team_eng = TEAM_NAME_KR.get(team_kr, team_kr)
@@ -153,6 +154,7 @@ def crawl_team_batting() -> dict:
                 "hr": hr,
                 "runs": runs,
                 "ops": ops,
+                "team_rbi": team_rbi,
                 "avg_display": f".{str(avg).split('.')[1][:3]}" if '.' in str(avg) else str(avg)
             }
 
@@ -194,6 +196,7 @@ def crawl_team_pitching() -> dict:
             pitching[team_eng] = {
                 "era": era,
                 "era_display": str(era),
+                "team_r": team_r
                 "runs_allowed": runs_allowed
             }
 
