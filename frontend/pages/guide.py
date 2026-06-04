@@ -8,6 +8,8 @@
 
 import streamlit as st
 import os
+import json
+import requests
 from datetime import datetime
 from dotenv import load_dotenv
 from backend.data.collect import TEAMS, get_ticket_link
@@ -21,6 +23,28 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 load_dotenv(dotenv_path=BASE_DIR / 'backend' / '.env')
 KAKAO_MAP_API_KEY = os.getenv("KAKAO_MAP_API_KEY")
+KAKAO_REST_KEY = os.getenv("KAKAO_REST_KEY")
+
+
+def get_nearby_parking(lat, lng, radius=1000):
+    """카카오 로컬 REST API로 주변 주차장(PK6) 검색."""
+    if not KAKAO_REST_KEY:
+        return []
+    try:
+        res = requests.get(
+            "https://dapi.kakao.com/v2/local/search/category.json",
+            headers={"Authorization": f"KakaoAK {KAKAO_REST_KEY}"},
+            params={
+                "category_group_code": "PK6",
+                "x": lng, "y": lat,
+                "radius": radius, "sort": "distance", "size": 15,
+            },
+            timeout=5,
+        )
+        res.raise_for_status()
+        return res.json().get("documents", [])
+    except Exception:
+        return []
 
 
 def show():
@@ -156,46 +180,87 @@ def show():
         st.write("### 교통 및 주차 정보")
         st.write(f"📍 주소: {stadium.get('address', '')}")
 
-        # 카카오맵 지도 임베드
         lat = stadium.get('lat', 37.5)
         lng = stadium.get('lng', 127.0)
         stadium_name = stadium.get('name', '')
+
+        # 파이썬(REST)에서 주차장 검색 → iframe 문제 우회
+        parking_list = get_nearby_parking(lat, lng, 1000)
+        parking_js = json.dumps(
+            [{"name": p["place_name"], "x": p["x"], "y": p["y"]} for p in parking_list],
+            ensure_ascii=False,
+        )
 
         if KAKAO_MAP_API_KEY:
             map_html = f"""
             <div id="map" style="width:100%;height:400px;border-radius:10px;"></div>
             <script type="text/javascript"
-                src="//dapi.kakao.com/v2/maps/sdk.js?appkey={KAKAO_MAP_API_KEY}">
+                src="https://dapi.kakao.com/v2/maps/sdk.js?appkey={KAKAO_MAP_API_KEY}&autoload=false">
             </script>
             <script>
-                var container = document.getElementById('map');
-                var options = {{
-                    center: new kakao.maps.LatLng({lat}, {lng}),
-                    level: 4
-                }};
-                var map = new kakao.maps.Map(container, options);
-                var markerPosition = new kakao.maps.LatLng({lat}, {lng});
-                var marker = new kakao.maps.Marker({{position: markerPosition}});
-                marker.setMap(map);
-                var infowindow = new kakao.maps.InfoWindow({{
-                    content: '<div style="padding:5px;">{stadium_name}</div>'
+                kakao.maps.load(function () {{
+                    var center = new kakao.maps.LatLng({lat}, {lng});
+                    var map = new kakao.maps.Map(
+                        document.getElementById('map'),
+                        {{ center: center, level: 5 }}
+                    );
+
+                    // 경기장 마커
+                    var marker = new kakao.maps.Marker({{ position: center }});
+                    marker.setMap(map);
+                    var infowindow = new kakao.maps.InfoWindow({{
+                        content: '<div style="padding:5px;">{stadium_name}</div>'
+                    }});
+                    infowindow.open(map, marker);
+
+                    // 주차장 마커 (파이썬에서 받은 목록)
+                    var parking = {parking_js};
+                    var bounds = new kakao.maps.LatLngBounds();
+                    bounds.extend(center);
+                    parking.forEach(function (p) {{
+                        var pos = new kakao.maps.LatLng(p.y, p.x);
+                        bounds.extend(pos);
+                        var pkMarker = new kakao.maps.Marker({{ position: pos, map: map }});
+                        var iw = new kakao.maps.InfoWindow({{
+                            content: '<div style="padding:5px;font-size:12px;">P ' + p.name + '</div>'
+                        }});
+                        kakao.maps.event.addListener(pkMarker, 'click', function () {{
+                            iw.open(map, pkMarker);
+                        }});
+                    }});
+                    if (parking.length > 0) map.setBounds(bounds);
                 }});
-                infowindow.open(map, marker);
             </script>
             """
             components.html(map_html, height=420)
+
+            # ── 경기장 자체 주차 정보 ──
+            st.divider()
+            if stadium.get("parking"):
+                st.success("✅ 경기장 주차 가능")
+                st.write("- 경기 시작 2시간 전부터 입차 가능")
+                st.write("- 경기 종료 후 혼잡 예상, 대중교통 이용 권장")
+            else:
+                st.error("❌ 경기장 주차 불가 — 대중교통 이용 권장")
+
+            # ── 주변 주차장 목록 ──
+            st.divider()
+            st.markdown("##### 🅿️ 주변 주차장 (반경 1km)")
+            if parking_list:
+                for p in parking_list:
+                    dist = p.get("distance", "")
+                    addr = p.get("road_address_name") or p.get("address_name", "")
+                    st.markdown(
+                        f"**P {p['place_name']}**"
+                        + (f" · {dist}m" if dist else "")
+                        + f"  \n<span style='color:#888;font-size:13px;'>{addr}</span>",
+                        unsafe_allow_html=True,
+                    )
+            else:
+                st.caption("주변 주차장 정보가 없습니다.")
         else:
             st.info(f"📍 {stadium_name}\n\n주소: {stadium.get('address', '')}")
 
-        st.divider()
-
-        parking = stadium.get("parking")
-        if parking:
-            st.success("✅ 경기장 주차 가능")
-            st.write("- 경기 시작 2시간 전부터 입차 가능")
-            st.write("- 경기 종료 후 혼잡 예상, 대중교통 이용 권장")
-        else:
-            st.error("❌ 경기장 주차 불가 — 대중교통 이용 권장")
 
     # 탭 3: 체크리스트
     with tab3:
