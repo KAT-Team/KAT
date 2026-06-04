@@ -196,7 +196,7 @@ def crawl_team_pitching() -> dict:
             pitching[team_eng] = {
                 "era": era,
                 "era_display": str(era),
-                "team_r": team_r
+                "team_r": runs_allowed,
                 "runs_allowed": runs_allowed
             }
 
