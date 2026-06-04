@@ -4,7 +4,9 @@
 - AI/ML 모델 미사용
 """
 
+from backend.data.team_crawler import crawl_all_team_stats
 from backend.data.team_stats import get_team_stats, get_pitcher_stats
+
 
 
 def calc_win_probability(
@@ -38,13 +40,31 @@ def calc_win_probability(
     if not home_stats or not away_stats:
         return {"home_prob": 50, "away_prob": 50, "comment": "데이터 없음", "factors": {}}
 
-    # 1. 기본 승률 기반 확률
-    home_wr = home_stats.get("win_rate", 0.5)
-    away_wr = away_stats.get("win_rate", 0.5)
+    # 실시간 홈/원정 승률 크롤링
+    all_stats = crawl_all_team_stats()
+    home_crawl = all_stats.get(home_team, {})
+    away_crawl = all_stats.get(away_team, {})
+
+    home_wr = home_crawl.get("win_rate", home_stats.get("win_rate", 0.5))
+    away_wr = away_crawl.get("win_rate", away_stats.get("win_rate", 0.5))
     base_prob = home_wr / (home_wr + away_wr)
 
-    # 2. 홈 어드밴티지 보정 (+3%)
-    home_advantage = 0.03
+    home_home_wr = home_crawl.get("home_win_rate", 0.5)
+    away_away_wr = away_crawl.get("away_win_rate", 0.5)
+    home_advantage = (home_home_wr - away_away_wr) * 0.1
+    home_advantage = max(-0.05, min(0.10, home_advantage))
+
+    # 득점력 보정
+    home_runs = home_crawl.get("runs", 0)
+    away_runs = away_crawl.get("runs", 0)
+    home_runs_allowed = home_crawl.get("runs_allowed", 0)
+    away_runs_allowed = away_crawl.get("runs_allowed", 0)
+    run_diff_bonus = ((home_runs - away_runs) - (home_runs_allowed - away_runs_allowed)) * 0.0001
+    run_diff_bonus = max(-0.05, min(0.05, run_diff_bonus))
+    home_ops = home_crawl.get("ops", 0.75)
+    away_ops = away_crawl.get("ops", 0.75)
+    ops_bonus = (home_ops - away_ops) * 0.3
+    ops_bonus = max(-0.05, min(0.05, ops_bonus))  # -5% ~ +5% 제한
 
     # 3. 컨디션 보정
     # 50점 = 보정 없음, 100점 = +10%, 0점 = -10%
@@ -58,7 +78,7 @@ def calc_win_probability(
     era_bonus = (away_era - home_era) * 0.01
 
     # 5. 최종 확률 계산
-    home_prob = base_prob + home_advantage + home_condition_bonus - away_condition_bonus + era_bonus
+    home_prob = base_prob + home_advantage + home_condition_bonus - away_condition_bonus + era_bonus + run_diff_bonus + ops_bonus
     home_prob = max(0.1, min(0.9, home_prob))  # 10~90% 범위 제한
     away_prob = 1 - home_prob
 
@@ -78,11 +98,19 @@ def calc_win_probability(
         "factors": {
             "base_prob": round(base_prob * 100, 1),
             "home_advantage": round(home_advantage * 100, 1),
+            "home_home_wr": home_home_wr,      # 추가
+            "away_away_wr": away_away_wr,      # 추가
             "home_condition_bonus": round(home_condition_bonus * 100, 1),
             "away_condition_bonus": round(away_condition_bonus * 100, 1),
             "era_bonus": round(era_bonus * 100, 1),
             "home_era": home_era,
             "away_era": away_era,
+            "run_diff_bonus": round(run_diff_bonus * 100, 1),  # ← 이거 추가
+            "home_runs": home_runs,                             # ← 이거 추가
+            "away_runs": away_runs,                             # ← 이거 추가
+            "ops_bonus": round(ops_bonus * 100, 1),
+            "home_ops": home_ops,
+            "away_ops": away_ops,
         }
     }
 
