@@ -150,50 +150,66 @@ elif 'page' not in st.session_state:
     st.session_state.page = 'home'
 
 # --- 3. 상단 가로형 배너 구성 ---
-header_col1, header_col2 = st.columns([1, 4])
+# Streamlit 컬럼 자체의 세로 정렬 갭을 줄이기 위해 빈 공간 분리를 제어하는 CSS 주입
+st.markdown("""
+<style>
+    /* 상단 헤더 영역의 컬럼들이 상단에 딱 맞게 정렬되도록 강제 */
+    div[data-testid="stColumn"] {
+        display: flex;
+        align-items: center; /* 세로 중앙 정렬 */
+    }
+    /* 버튼 내부 마진으로 인해 밀리는 현상 방지 */
+    .stButton > button {
+        margin-top: 0px !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# vertical_alignment="center" 옵션을 추가하여 내부 요소들이 항상 세로 중앙에 오도록 설정
+header_col1, header_col2 = st.columns([1, 4], vertical_alignment="center")
 
 with header_col1:
     st.markdown("""
     <div style="
         display: flex;
         align-items: center;
-        padding: 10px 0;
+        padding: 5px 0; /* 패딩을 살짝 줄여 안정감 확보 */
         gap: 12px;
     ">
         <span style="font-size:28px;">⚾</span>
         <div>
-            <span class="nav-logo-text">KAT</span>
-            <div class="nav-logo-sub">KBO ALL-IN-ONE TOOL</div>
+            <span class="nav-logo-text" style="line-height: 1.1; display: block;">KAT</span>
+            <div class="nav-logo-sub" style="line-height: 1.1; margin-top: 2px;">KBO ALL-IN-ONE TOOL</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # 네비게이션 버튼
-    with header_col2:
-        btn_col1, btn_col2, btn_col3, btn_col4, btn_col5 = st.columns(5)
-        with btn_col1:
-            if st.button("🏠 홈", use_container_width=True):
-                st.session_state.page = 'home'
-                st.query_params['page'] = 'home'
-                st.rerun()
-        with btn_col2:
-            if st.button("📅 경기 일정", use_container_width=True):
-                st.query_params['page'] = 'schedule'
-                st.rerun()
-        with btn_col3:
-            if st.button("🧭 직관도우미", use_container_width=True):
-                st.query_params['page'] = 'guide'
-                st.rerun()
-        with btn_col4:
-            if st.button("🏆 구단 순위", use_container_width=True):
-                st.query_params['page'] = 'ranking'
-                st.rerun()
-        with btn_col5:
-            if st.button("🆚 승부 예측", use_container_width=True):
-                st.query_params['page'] = 'picks'
-                st.rerun()
+# [주의] header_col2는 header_col1과 동등한 위치(들여쓰기 탈출)에 있어야 합니다.
+with header_col2:
+    btn_col1, btn_col2, btn_col3, btn_col4, btn_col5 = st.columns(5, vertical_alignment="center")
+    with btn_col1:
+        if st.button("🏠 홈", use_container_width=True):
+            st.session_state.page = 'home'
+            st.query_params['page'] = 'home'
+            st.rerun()
+    with btn_col2:
+        if st.button("📅 경기 일정", use_container_width=True):
+            st.query_params['page'] = 'schedule'
+            st.rerun()
+    with btn_col3:
+        if st.button("🧭 직관도우미", use_container_width=True):
+            st.query_params['page'] = 'guide'
+            st.rerun()
+    with btn_col4:
+        if st.button("🏆 구단 순위", use_container_width=True):
+            st.query_params['page'] = 'ranking'
+            st.rerun()
+    with btn_col5:
+        if st.button("🆚 승부 예측", use_container_width=True):
+            st.query_params['page'] = 'picks'
+            st.rerun()
 
-        st.divider()
+st.divider()
 
 # 4. 페이지 라우팅
 if st.session_state.page == 'home':
