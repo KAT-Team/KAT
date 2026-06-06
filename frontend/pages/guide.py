@@ -118,7 +118,7 @@ def show():
         tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "🌤️ 날씨",
             "🚌 교통/주차",
-            "📋 체크리스트",
+            "🎒 추천 준비물",
             "📖 원정 가이드",
             "💺 좌석 가격"
         ])
@@ -266,40 +266,60 @@ def show():
                 st.info(f"📍 {stadium_name}\n\n주소: {stadium.get('address', '')}")
 
 
-        # 탭 3: 체크리스트
-        with tab3:
-            st.write("### ✅ 직관 체크리스트")
+        # 탭 3: 추천 준비물
+    with tab3:
+        rain_prob = weather.get("rain_prob", 0) if 'weather' in dir() else 0
 
-            rain_prob = weather.get("rain_prob", 0) if 'weather' in dir() else 0
+        def prep_card(title, items):
+            chips = " ".join([
+                f'<span style="display:inline-block; background:#F5F6FA; '
+                f'border:1px solid #E8EAF1; border-radius:20px; '
+                f'padding:8px 16px; margin:4px 6px 4px 0; font-size:14px; '
+                f'color:#2C3144; font-weight:500;">{i}</span>'
+                for i in items
+            ])
+            st.markdown(
+                f'<div style="background:#FFFFFF; border:1px solid #E8EAF1; '
+                f'border-radius:14px; padding:18px 20px; margin-bottom:16px; '
+                f'box-shadow:0 1px 3px rgba(0,0,0,0.04);">'
+                f'<div style="font-size:16px; font-weight:700; color:#2C3144; '
+                f'margin-bottom:12px;">{title}</div>'
+                f'<div>{chips}</div></div>',
+                unsafe_allow_html=True,
+            )
 
-            st.write("#### 기본 준비물")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.checkbox("🎟️ 티켓 (모바일 or 실물)")
-                st.checkbox("🪪 신분증")
-                st.checkbox("👟 편한 신발")
-                st.checkbox("💰 현금/카드")
-            with col2:
-                st.checkbox("📱 스마트폰 충전")
-                st.checkbox("🎽 응원 도구")
-                st.checkbox("🍱 간식 / 음료")
-                st.checkbox("🧴 선크림")
+        prep_card("🧳 기본 준비물", [
+            "🎟️ 티켓 (모바일 or 실물)", "🪪 신분증", "👟 편한 신발", "💰 현금/카드",
+            "📱 보조배터리", "🎽 응원 도구", "🍱 간식 / 음료", "🧴 선크림",
+            "🧻 물티슈/휴지"
+        ])
 
-            if rain_prob >= 40:
-                st.write("#### ☔ 우천 대비 준비물")
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.checkbox("🌂 우산")
-                    st.checkbox("🧥 방수 재킷")
-                with col2:
-                    st.checkbox("👟 방수 신발")
-                    st.checkbox("🛡️ 우비")
+        if rain_prob >= 40:
+            prep_card("☔ 우천 대비 준비물",
+                      ["🌂 우산", "🧥 방수 재킷", "👟 방수 신발", "🛡️ 우비"])
 
-            st.divider()
-            st.write("#### 📱 유용한 앱")
-            st.write("- **KBO 공식 앱**: 실시간 경기 정보")
-            st.write("- **카카오맵**: 경기장 길 찾기")
-            st.write("- **기상청 날씨**: 실시간 날씨 확인")
+        apps = [
+            ("📱", "KBO 공식 앱", "실시간 경기 정보", "https://www.koreabaseball.com"),
+            ("🗺️", "카카오맵", "경기장 길 찾기", "https://map.kakao.com"),
+            ("🌤️", "기상청 날씨", "실시간 날씨 확인", "https://www.weather.go.kr"),
+        ]
+        app_cards = "".join([
+            f'<a href="{url}" target="_blank" style="text-decoration:none;">'
+            f'<div style="background:#FFFFFF; border:1px solid #E8EAF1; '
+            f'border-radius:14px; padding:16px 18px; margin-bottom:10px; '
+            f'box-shadow:0 1px 3px rgba(0,0,0,0.04); '
+            f'display:flex; align-items:center; gap:12px;">'
+            f'<span style="font-size:22px;">{emoji}</span>'
+            f'<span><span style="font-size:15px; font-weight:700; color:#2C3144;">{name}</span>'
+            f'<br><span style="font-size:13px; color:#8A8F9C;">{desc}</span></span>'
+            f'</div></a>'
+            for emoji, name, desc, url in apps
+        ])
+        st.markdown(
+            '<div style="font-size:16px; font-weight:700; color:#2C3144; '
+            'margin:8px 0 12px;">📱 유용한 앱</div>' + app_cards,
+            unsafe_allow_html=True,
+        )
 
         # 탭 4: 원정 가이드
         with tab4:
