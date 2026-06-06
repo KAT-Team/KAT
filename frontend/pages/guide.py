@@ -336,34 +336,39 @@ def show():
             st.divider()
             st.write("#### 🗺️ 좌석 배치도")
 
-            team_to_map = {
-                "KIA":     "KIA_seat",
-                "Samsung": "SAMSUNG_seat",
-                "LG":      "DOOSAN LG_seat",
-                "Doosan":  "DOOSAN LG_seat",
-                "KT":      "KT_seat",
-                "SSG":     "SSG_seat",
-                "Lotte":   "LOTTE_seat",
-                "Hanwha":  "HANHWA_seat",
-                "NC":      "NC_seat",
-                "Kiwoom":  "KIWOOM_seat",
-            }
+        team_to_map = {
+            "KIA":     "KIA_seat",
+            "Samsung": "SAMSUNG_seat",
+            "LG":      "DOOSAN LG_seat",
+            "Doosan":  "DOOSAN LG_seat",
+            "KT":      "KT_seat",
+            "SSG":     "SSG_seat",
+            "Lotte":   "LOTTE_seat",
+            "Hanwha":  "HANHWA_seat",
+            "NC":      "NC_seat",
+            "Kiwoom":  "KIWOOM_seat",
+        }
 
-            map_filename = team_to_map.get(selected_team)
-            map_path = None
+        map_filename = team_to_map.get(selected_team)
+        map_path = None
+        if map_filename:
+            for ext in [".webp", ".png", ".jpg", ".jpeg"]:
+                candidate = Path(BASE_DIR) / "frontend" / "assets" / "stadium_maps" / f"{map_filename}{ext}"
+                if candidate.exists():
+                    map_path = candidate
+                    break
 
-            if map_filename:
-                for ext in [".webp", ".png", ".jpg", ".jpeg"]:
-                    candidate = Path(BASE_DIR) / "frontend" / "assets" / "stadium_maps" / f"{map_filename}{ext}"
-                    if candidate.exists():
-                        map_path = candidate
-                        break
-
-            if map_path:
-                st.image(str(map_path), use_container_width=True)
-            else:
-                st.caption("좌석 배치도를 준비 중입니다.")
-
-            st.divider()
-            ticket_url = get_ticket_link(selected_team)
-            team_name = TEAMS.get(selected_team, selected_team)
+        if map_path:
+            import base64
+            b64 = base64.b64encode(map_path.read_bytes()).decode()
+            suffix = map_path.suffix.lstrip(".").lower()
+            mime = "jpeg" if suffix in ("jpg", "jpeg") else suffix
+            st.markdown(
+                '<div style="background:#fff; border:1px solid #E8EAF1; border-radius:14px; '
+                'padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.04); text-align:center;">'
+                f'<img src="data:image/{mime};base64,{b64}" '
+                'style="max-width:85%; height:auto; border-radius:8px;" /></div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.caption("좌석 배치도를 준비 중입니다.")
