@@ -349,12 +349,12 @@ def show():
             st.write("- 수유실: 1층 안내데스크 문의")
 
         # 탭 5: 좌석 가격
-        with tab5:
-            st.write("### 💺 좌석 가격 (성인 1인 기준)")
-            draw_seat_price_table(selected_team)
+    with tab5:
+        st.write("### 💺 좌석 가격 (성인 1인 기준)")
+        draw_seat_price_table(selected_team)
 
-            st.divider()
-            st.write("#### 🗺️ 좌석 배치도")
+        st.divider()
+        st.write("#### 🗺️ 좌석 배치도")
 
         team_to_map = {
             "KIA":     "KIA_seat",
@@ -370,6 +370,7 @@ def show():
         }
 
         map_filename = team_to_map.get(selected_team)
+
         map_path = None
         if map_filename:
             for ext in [".webp", ".png", ".jpg", ".jpeg"]:
@@ -392,3 +393,4 @@ def show():
             )
         else:
             st.caption("좌석 배치도를 준비 중입니다.")
+
