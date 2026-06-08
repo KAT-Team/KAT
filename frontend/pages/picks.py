@@ -351,7 +351,7 @@ def show():
             st.markdown("<p style='font-size: 14px; color: gray;'>경기를 선택하고 하단의 제출하기 버튼을 누르면 예측 현황 대시보드가 활성화됩니다.</p>", unsafe_allow_html=True)
             st.markdown('<div style="border: 2px dashed #E2E8F0; border-radius: 12px; padding: 40px 16px; text-align: center; color: #A0AEC0; font-size: 14px; margin-top: 26px;">예측 제출 대기 중 🕒</div>', unsafe_allow_html=True)
         else:
-            st.markdown("<p style='font-size: 14px; color: gray;'>마킹된 구단과 획득 가능한 리워드 정보입니다.</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size: 14px; color: gray;'>선택한 구단과 획득 가능한 리워드 정보입니다.</p>", unsafe_allow_html=True)
 
             # 왼쪽 라인업 카드들과의 간격을 고려해 미세 조정한 여백
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
@@ -360,16 +360,33 @@ def show():
 
             total_potential_points = 0
 
-            # 제출 시점에 고정된 스냅샷 데이터를 순회하며 렌더링
-            for snap in st.session_state.submitted_picks_info:
-                team_display = f'<b style="color: {TEAM_COLORS.get(snap["team_eng"], "#1A202C")};">{snap["team"]}</b>'
-                point_display = f'<span style="color: #3182CE; font-weight: bold;">+{snap["point"]}P</span>'
-                total_potential_points += snap["point"]
+            # 🔥 [실시간 렌더링] total_match_votes 데이터를 실시간 조회하여 배당 포인트를 매번 재계산합니다.
+            for i, match in enumerate(TODAYS_MATCHES):
+                user_pick = st.session_state.user_current_picks[i]
+                votes_data = st.session_state.total_match_votes[i]
+
+                # 실시간 배당 포인트 수식 적용
+                calc_away_p = int(100 + (votes_data["home"] / votes_data["away"]) * 100)
+                calc_home_p = int(100 + (votes_data["away"] / votes_data["home"]) * 100)
+
+                if user_pick == "away":
+                    team_name = match["away"]
+                    team_color = TEAM_COLORS.get(match["away_eng"], "#1A202C")
+                    current_p = calc_away_p
+                else:
+                    team_name = match["home"]
+                    team_color = TEAM_COLORS.get(match["home_eng"], "#1A202C")
+                    current_p = calc_home_p
+
+                total_potential_points += current_p
+
+                team_display = f'<b style="color: {team_color};">{team_name}</b>'
+                point_display = f'<span style="color: #3182CE; font-weight: bold;">+{current_p}P</span>'
 
                 summary_html += '<div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #E2E8F0;">'
                 summary_html += '<div style="display: flex; flex-direction: column;">'
-                summary_html += f'<span style="font-size: 11px; color: #718096;">{snap["time"]} [{snap["stadium"]}]</span>'
-                summary_html += f'<span style="font-size: 13px; color: #4A5568; font-weight: 500;">{snap["title"]}</span>'
+                summary_html += f'<span style="font-size: 11px; color: #718096;">{match["time"]} [{match["stadium"]}]</span>'
+                summary_html += f'<span style="font-size: 13px; color: #4A5568; font-weight: 500;">{match["away"]} vs {match["home"]}</span>'
                 summary_html += '</div>'
                 summary_html += '<div style="text-align: right; line-height: 1.3;">'
                 summary_html += f'<span style="font-size: 14px;">{team_display}</span><br>'
@@ -377,10 +394,6 @@ def show():
                 summary_html += '</div>'
                 summary_html += '</div>'
 
-            summary_html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 4px;">'
-            summary_html += '<span style="font-size: 14px; font-weight: bold; color: #2D3748;">선택 완료 경기</span>'
-            summary_html += f'<span style="font-size: 15px; font-weight: bold; color: #2D3748;">{len(st.session_state.submitted_picks_info)} / {len(TODAYS_MATCHES)}</span>'
-            summary_html += '</div>'
             summary_html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">'
             summary_html += '<span style="font-size: 14px; font-weight: bold; color: #2D3748;">최대 획득 포인트</span>'
             summary_html += f'<span style="font-size: 18px; font-weight: 800; color: #3182CE;">{total_potential_points:,} P</span>'
