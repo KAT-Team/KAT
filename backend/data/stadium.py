@@ -73,7 +73,7 @@ STADIUM_INFO = {
         "lat": 35.194,
         "lng": 129.061,
         "capacity": 24500,
-        "parking": False,
+        "parking": True,
         "home_section": "1루 내야/외야",
         "away_section": "3루 내야/외야",
     },
