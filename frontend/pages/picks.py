@@ -1,11 +1,3 @@
-"""
-승부예측 페이지
-- kbo_schedule.json 기반 미래 날짜 자동 탐색 기능 유지
-- calendar_view.py의 검증된 base64 로고 인코딩 기술을 도입하여 로고 깨짐 전면 해결
-- HTML 통합형 그라데이션 박스로 테두리 찢어짐 버그 원천 차단
-- 우측 실시간 픽 현황 및 리워드 대시보드 추가
-"""
-
 import os
 import json
 import base64
@@ -18,7 +10,6 @@ TEAM_NAME_KR = {
     "롯데": "Lotte", "한화": "Hanwha", "NC": "NC", "키움": "Kiwoom"
 }
 
-#  팀별 성적 데이터베이스 -> crawler.py에서 팀 기록 받아와야함
 TEAM_STATS = {
     "KIA": {"avg": ".291", "era": "3.95"},
     "삼성": {"avg": ".268", "era": "4.21"},
@@ -31,17 +22,18 @@ TEAM_STATS = {
     "NC": {"avg": ".271", "era": "4.30"},
     "키움": {"avg": ".258", "era": "5.12"}
 }
+
 TEAM_COLORS = {
-    "KIA": "#EA0029",     # 기아 빨강
-    "Samsung": "#074CA1", # 삼성 파랑
-    "LG": "#C30452",      # LG 빨강
-    "Doosan": "#131230",  # 두산 네이비
-    "KT": "#000000",      # KT 검정
-    "SSG": "#CE0E2D",     # SSG 빨강
-    "Lotte": "#002058",   # 롯데 네이비
-    "Hanwha": "#FF6600",  # 한화 주황
-    "NC": "#071D49",      # NC 네이비
-    "Kiwoom": "#820024",  # 키움 와인
+    "KIA": "#EA0029",
+    "Samsung": "#074CA1",
+    "LG": "#C30452",
+    "Doosan": "#131230",
+    "KT": "#000000",
+    "SSG": "#CE0E2D",
+    "Lotte": "#002058",
+    "Hanwha": "#FF6600",
+    "NC": "#071D49",
+    "Kiwoom": "#820024",
 }
 
 
@@ -107,13 +99,11 @@ def load_todays_matches_from_json():
             "away_logo": f"frontend/assets/logo_{away_eng.lower()}.svg",
             "away_avg": away_stat["avg"],
             "away_era": away_stat["era"],
-
             "home": home_team,
             "home_eng": home_eng,
             "home_logo": f"frontend/assets/logo_{home_eng.lower()}.svg",
             "home_avg": home_stat["avg"],
             "home_era": home_stat["era"],
-
             "time": match.get("시간", "18:30"),
             "stadium": match.get("구장", "야구장")
         })
@@ -123,45 +113,116 @@ def load_todays_matches_from_json():
 TODAYS_MATCHES, MATCH_DATE, DATE_CAPTION = load_todays_matches_from_json()
 
 def show():
+
+    # 전역 스타일 패치: 카드 하단 검은색 사각형 찌꺼기 방지 및 투명도 유지
+    st.markdown("""
+    <style>
+        div[data-testid="stVerticalBlockBorderWithStyling"] {
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .feed-container {
+            overflow: hidden !important;
+            background-color: transparent !important;
+            margin-top: 30px;
+            font-family: sans-serif;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # 원본 Column 비율 철저히 유지
     left_space, center_content, right_content, right_space = st.columns([1.5, 6, 2, 1.5])
 
-    # 1️[세션 상태 초기화] 변수들이 없으면 안전하게 생성
+    # 1️⃣ [세션 상태 초기화]
     if "total_match_votes" not in st.session_state:
         st.session_state.total_match_votes = {
-            i: {"away": 5, "home": 5} for i in range(len(TODAYS_MATCHES))
+            i: {"away": 10, "home": 10} for i in range(len(TODAYS_MATCHES))
         }
 
-    # 유저가 화면에서 마킹하는 임시 저장소
     if "user_current_picks" not in st.session_state:
         st.session_state.user_current_picks = {i: "none" for i in range(len(TODAYS_MATCHES))}
 
-    # 실제 '제출'이 완료되었는지 여부를 추적하는 플래그
-    if "vote_submitted" not in st.session_state:
-        st.session_state.vote_submitted = False
+    if "vote_history" not in st.session_state:
+        st.session_state.vote_history = []
 
-    # [신규] 제출하는 순간의 팀과 포인트 스냅샷을 저장할 저장소
-    if "submitted_picks_info" not in st.session_state:
-        st.session_state.submitted_picks_info = []
-
-    # [콜백 함수 정의] 위젯 값이 바뀔 때 락(Lock) 없이 안전하게 세션과 싱크를 맞춤
+    # [체크박스 콜백 함수 정의]
     def on_away_change(index):
         key = f"chk_away_raw_{index}"
-        if st.session_state[key]: # 원정을 체크했다면
+        if st.session_state[key]:
             st.session_state.user_current_picks[index] = "away"
-            st.session_state[f"chk_home_raw_{index}"] = False # 홈 체크 해제
+            st.session_state[f"chk_home_raw_{index}"] = False
         else:
             if st.session_state.user_current_picks[index] == "away":
                 st.session_state.user_current_picks[index] = "none"
 
     def on_home_change(index):
         key = f"chk_home_raw_{index}"
-        if st.session_state[key]: # 홈을 체크했다면
+        if st.session_state[key]:
             st.session_state.user_current_picks[index] = "home"
-            st.session_state[f"chk_away_raw_{index}"] = False # 원정 체크 해제
+            st.session_state[f"chk_away_raw_{index}"] = False
         else:
             if st.session_state.user_current_picks[index] == "home":
                 st.session_state.user_current_picks[index] = "none"
 
+    # 👤 [닉네임 입력 및 중복 검증 모달 팝업]
+    @st.dialog("👤 참여자 닉네임 등록")
+    def open_nickname_dialog():
+        st.write("예측 피드에 기록될 닉네임을 입력하세요. (여러 번 참여 가능하나 중복 닉네임은 불가능합니다.)")
+        input_nickname = st.text_input("닉네임 입력 (최대 10자)", max_chars=10, placeholder="예: 한화이글스화이팅").strip()
+
+        existing_nicknames = [record["nickname"] for record in st.session_state.vote_history]
+
+        if st.button("예측 제출 및 등록하기", type="primary", use_container_width=True):
+            if not input_nickname:
+                st.error("⚠️ 닉네임을 입력하지 않았습니다.")
+                return
+
+            if input_nickname in existing_nicknames:
+                st.error(f"❌ '{input_nickname}'은(는) 이미 등록된 닉네임입니다. 다른 닉네임을 사용해주세요.")
+                return
+
+            current_submission_picks = []
+            submission_total_points = 0  # 💡 하단 피드 테이블 전송용 총 포인트 변수 추가
+
+            for idx in range(len(TODAYS_MATCHES)):
+                match = TODAYS_MATCHES[idx]
+                user_pick = st.session_state.user_current_picks[idx]
+                votes_data = st.session_state.total_match_votes[idx]
+
+                calc_away_p = int(100 + (votes_data["home"] / votes_data["away"]) * 100)
+                calc_home_p = int(100 + (votes_data["away"] / votes_data["home"]) * 100)
+
+                if user_pick == "away":
+                    chosen_team = match["away"]
+                    chosen_p = calc_away_p
+                    st.session_state.total_match_votes[idx]["away"] += 1
+                else:
+                    chosen_team = match["home"]
+                    chosen_p = calc_home_p
+                    st.session_state.total_match_votes[idx]["home"] += 1
+
+                current_submission_picks.append(f"<b>{chosen_team}</b>({chosen_p}P)")
+                submission_total_points += chosen_p  # 각 경기 포인트를 누적 합산
+
+            st.session_state.vote_history.append({
+                "no": len(st.session_state.vote_history) + 1,
+                "nickname": input_nickname,
+                "picks": " , ".join(current_submission_picks),
+                "total_points": submission_total_points  # 💡 히스토리에 총 획득 가능 포인트 저장
+            })
+
+            for idx in range(len(TODAYS_MATCHES)):
+                st.session_state.user_current_picks[idx] = "none"
+                if f"chk_away_raw_{idx}" in st.session_state:
+                    st.session_state[f"chk_away_raw_{idx}"] = False
+                if f"chk_home_raw_{idx}" in st.session_state:
+                    st.session_state[f"chk_home_raw_{idx}"] = False
+
+            st.success(f"🎉 {input_nickname}님의 소중한 예측이 등록되었습니다!")
+            st.rerun()
+
+    # 2️⃣ 중앙 콘텐츠 영역
     with center_content:
         st.markdown("### 🔮 승부 예측")
         st.markdown(f"<p style='font-size: 14px; color: gray;'>{DATE_CAPTION}</p>", unsafe_allow_html=True)
@@ -173,7 +234,6 @@ def show():
             st.info("당분간 예정된 KBO 경기 일정이 없습니다.")
             return
 
-        # 경기 라인업 카드 출력
         for i, match in enumerate(TODAYS_MATCHES):
             votes_data = st.session_state.total_match_votes[i]
             away_votes = votes_data["away"]
@@ -218,17 +278,7 @@ def show():
                 col_chk_away, col_team_away, col_center, col_team_home, col_chk_home = st.columns([0.6, 2.6, 3.6, 2.6, 0.6])
 
                 with col_chk_away:
-                    chk_away_key = f"chk_away_raw_{i}"
-                    is_disabled = st.session_state.vote_submitted
-
-                    st.checkbox(
-                        "",
-                        key=chk_away_key,
-                        disabled=is_disabled,
-                        label_visibility="collapsed",
-                        on_change=on_away_change,
-                        args=(i,)
-                    )
+                    st.checkbox("", key=f"chk_away_raw_{i}", label_visibility="collapsed", on_change=on_away_change, args=(i,))
 
                 with col_team_away:
                     st.markdown(f"""
@@ -271,122 +321,76 @@ def show():
                     """, unsafe_allow_html=True)
 
                 with col_chk_home:
-                    chk_home_key = f"chk_home_raw_{i}"
-                    st.checkbox(
-                        "",
-                        key=chk_home_key,
-                        disabled=is_disabled,
-                        label_visibility="collapsed",
-                        on_change=on_home_change,
-                        args=(i,)
-                    )
+                    st.checkbox("", key=f"chk_home_raw_{i}", label_visibility="collapsed", on_change=on_home_change, args=(i,))
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        button_label = "제출이 완료되었습니다" if st.session_state.vote_submitted else "승부예측 제출하기"
-
-        if st.button(button_label, type="primary", use_container_width=True, disabled=st.session_state.vote_submitted):
-            submit_count = 0
-            for idx in range(len(TODAYS_MATCHES)):
-                if st.session_state.user_current_picks[idx] in ["away", "home"]:
-                    submit_count += 1
-
+        if st.button("승부예측 제출하기", type="primary", use_container_width=True):
+            submit_count = sum(1 for idx in range(len(TODAYS_MATCHES)) if st.session_state.user_current_picks[idx] in ["away", "home"])
             if submit_count == len(TODAYS_MATCHES):
-                temp_snapshot = []
-                for idx in range(len(TODAYS_MATCHES)):
-                    match = TODAYS_MATCHES[idx]
-                    final_pick = st.session_state.user_current_picks[idx]
-                    votes_data = st.session_state.total_match_votes[idx]
-
-                    calc_away_p = int(100 + (votes_data["home"] / votes_data["away"]) * 100)
-                    calc_home_p = int(100 + (votes_data["away"] / votes_data["home"]) * 100)
-
-                    if final_pick == "away":
-                        chosen_team = match["away"]
-                        chosen_eng = match["away_eng"]
-                        allocated_point = calc_away_p
-                    else:
-                        chosen_team = match["home"]
-                        chosen_eng = match["home_eng"]
-                        allocated_point = calc_home_p
-
-                    temp_snapshot.append({
-                        "time": match["time"],
-                        "stadium": match["stadium"],
-                        "title": f"{match['away']} vs {match['home']}",
-                        "team": chosen_team,
-                        "team_eng": chosen_eng,
-                        "point": allocated_point
-                    })
-
-                for idx in range(len(TODAYS_MATCHES)):
-                    final_pick = st.session_state.user_current_picks[idx]
-                    if final_pick == "away":
-                        st.session_state.total_match_votes[idx]["away"] += 1
-                    elif final_pick == "home":
-                        st.session_state.total_match_votes[idx]["home"] += 1
-
-                st.session_state.submitted_picks_info = temp_snapshot
-                st.session_state.vote_submitted = True
-                st.rerun()
+                open_nickname_dialog()
             else:
-                st.warning("⚠️ 모든 경기의 승부를 예측해주세요.")
+                st.warning("⚠️ 모든 경기의 승부를 마킹한 후 제출해 주세요.")
 
+    # 3️⃣ 우측 대시보드 영역 (나의 예측 현황)
     with right_content:
         st.markdown("<div style='height: 120px;'></div>", unsafe_allow_html=True)
-
         st.markdown("### 📊 나의 예측 현황")
 
-        if not st.session_state.vote_submitted:
-            st.markdown("<p style='font-size: 14px; color: gray;'>경기를 선택하고 하단의 제출하기 버튼을 누르면 예측 현황 대시보드가 활성화됩니다.</p>", unsafe_allow_html=True)
-            st.markdown('<div style="border: 2px dashed #E2E8F0; border-radius: 12px; padding: 40px 16px; text-align: center; color: #A0AEC0; font-size: 14px; margin-top: 26px;">예측 제출 대기 중 🕒</div>', unsafe_allow_html=True)
+        submit_count = sum(1 for idx in range(len(TODAYS_MATCHES)) if st.session_state.user_current_picks[idx] in ["away", "home"])
+
+        if submit_count == 0:
+            st.markdown('<div style="border: 2px dashed #E2E8F0; border-radius: 12px; padding: 40px 16px; text-align: center; color: #A0AEC0; font-size: 14px; margin-top: 26px;">예측 마킹 대기 중 🕒</div>', unsafe_allow_html=True)
         else:
-            st.markdown("<p style='font-size: 14px; color: gray;'>선택한 구단과 획득 가능한 리워드 정보입니다.</p>", unsafe_allow_html=True)
+            st.markdown("<div style='height: 30px;'></div>", unsafe_allow_html=True)
 
-            # 왼쪽 라인업 카드들과의 간격을 고려해 미세 조정한 여백
-            st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-
-            summary_html = '<div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; font-family: sans-serif;">'
-
+            summary_inner_html = ""
             total_potential_points = 0
 
             for i, match in enumerate(TODAYS_MATCHES):
                 user_pick = st.session_state.user_current_picks[i]
-                votes_data = st.session_state.total_match_votes[i]
+                if user_pick == "none":
+                    continue
 
-                # 실시간 배당 포인트 수식 적용
+                votes_data = st.session_state.total_match_votes[i]
                 calc_away_p = int(100 + (votes_data["home"] / votes_data["away"]) * 100)
                 calc_home_p = int(100 + (votes_data["away"] / votes_data["home"]) * 100)
 
                 if user_pick == "away":
-                    team_name = match["away"]
-                    team_color = TEAM_COLORS.get(match["away_eng"], "#1A202C")
-                    current_p = calc_away_p
+                    team_name, team_color, current_p = match["away"], TEAM_COLORS.get(match["away_eng"], "#1A202C"), calc_away_p
                 else:
-                    team_name = match["home"]
-                    team_color = TEAM_COLORS.get(match["home_eng"], "#1A202C")
-                    current_p = calc_home_p
+                    team_name, team_color, current_p = match["home"], TEAM_COLORS.get(match["home_eng"], "#1A202C"), calc_home_p
 
                 total_potential_points += current_p
 
-                team_display = f'<b style="color: {team_color};">{team_name}</b>'
-                point_display = f'<span style="color: #3182CE; font-weight: bold;">+{current_p}P</span>'
+                summary_inner_html += f'<div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #E2E8F0; background: transparent;"><div style="display: flex; flex-direction: column;"><span style="font-size: 11px; color: #718096;">{match["time"]} [{match["stadium"]}]</span><span style="font-size: 13px; color: #4A5568; font-weight: 500;">{match["away"]} vs {match["home"]}</span></div><div style="text-align: right; line-height: 1.3;"><span style="font-size: 14px; color: {team_color}; font-weight: bold;">{team_name}</span><br><span style="font-size: 11px; color: #3182CE; font-weight: bold;">+{current_p}P</span></div></div>'
 
-                summary_html += '<div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #E2E8F0;">'
-                summary_html += '<div style="display: flex; flex-direction: column;">'
-                summary_html += f'<span style="font-size: 11px; color: #718096;">{match["time"]} [{match["stadium"]}]</span>'
-                summary_html += f'<span style="font-size: 13px; color: #4A5568; font-weight: 500;">{match["away"]} vs {match["home"]}</span>'
-                summary_html += '</div>'
-                summary_html += '<div style="text-align: right; line-height: 1.3;">'
-                summary_html += f'<span style="font-size: 14px;">{team_display}</span><br>'
-                summary_html += f'<span style="font-size: 11px;">{point_display}</span>'
-                summary_html += '</div>'
-                summary_html += '</div>'
+            summary_final_html = f'<div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; font-family: sans-serif;">{summary_inner_html}<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 4px;"><span style="font-size: 14px; font-weight: bold; color: #2D3748;">마킹 완료 경기</span><span style="font-size: 15px; font-weight: bold; color: #2D3748;">{submit_count} / {len(TODAYS_MATCHES)}</span></div><div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;"><span style="font-size: 14px; font-weight: bold; color: #2D3748;">최대 예상 리워드</span><span style="font-size: 18px; font-weight: 800; color: #3182CE;">{total_potential_points:,} P</span></div></div>'
+            st.markdown(summary_final_html, unsafe_allow_html=True)
 
-            summary_html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">'
-            summary_html += '<span style="font-size: 14px; font-weight: bold; color: #2D3748;">최대 획득 포인트</span>'
-            summary_html += f'<span style="font-size: 18px; font-weight: 800; color: #3182CE;">{total_potential_points:,} P</span>'
-            summary_html += '</div>'
-            summary_html += '</div>'
+    # 4️⃣ 📜 실시간 참여 유저 예측 현황 피드 (제출순 정렬 테이블 영역)
+    st.markdown("<div class='feed-container'>", unsafe_allow_html=True)
+    st.markdown("---")
 
-            st.markdown(summary_html, unsafe_allow_html=True)
+    left_space, center_content, right_space= st.columns([1.5, 8, 1.5])
+    with center_content:
+        st.markdown("### 📜 승부예측 유저 참여 현황")
+        st.markdown("<p style='font-size: 14px; color: gray;'>유저들이 등록한 승부예측 기록이 실시간으로 하단에 누적됩니다. (최근 제출 순서 상단 정렬)</p>", unsafe_allow_html=True)
+
+        if not st.session_state.vote_history:
+            st.info("아직 제출된 승부예측 히스토리가 존재하지 않습니다. 첫 번째 예측 기록의 주인공이 되어보세요!")
+        else:
+            table_rows_html = ""
+            for record in st.session_state.vote_history[::-1]:
+                # 💡 기존 데이터와 호환성을 맞추기 위해 초기 더미데이터 등 total_points 키가 없는 경우 기본값 0P 처리
+                pts = record.get("total_points", 0)
+                formatted_pts = f"{pts:,} P" if pts > 0 else "-"
+
+                # 💡 [우측 열 추가] 맨 오른쪽에 '최대 예상 리워드' 데이터를 랜더링하는 <td> 추가
+                table_rows_html += f'<tr style="border-bottom: 1px solid #E2E8F0; background: transparent;"><td style="padding: 12px; font-size: 13px; color: #64748B; font-weight: bold; background: transparent;">{record["no"]}</td><td style="padding: 12px; font-size: 14px; color: #1E293B; font-weight: bold; background: transparent;">👤 {record["nickname"]}</td><td style="padding: 12px; font-size: 13px; color: #334155; line-height: 1.5; background: transparent;">{record["picks"]}</td><td style="padding: 12px; font-size: 14px; color: #3182CE; font-weight: bold; background: transparent;">{formatted_pts}</td></tr>'
+
+            # 💡 [헤더 추가 및 비율 조절] 총 100% 비율 내에서 우측에 열(15% 부여)을 신설하고 기존 열 비율 재조정
+            history_table_html = f'<table style="width:100%; border-collapse: collapse; margin-top:14px; text-align: left; background-color: #FFFFFF; border-radius: 8px; border: 1px solid #E2E8F0;"><thead><tr style="background-color: #F1F5F9; border-bottom: 2px solid #CBD5E1;"><th style="padding: 12px; font-size: 14px; color: #475569; width: 7%; font-weight: 600;">순번</th><th style="padding: 12px; font-size: 14px; color: #475569; width: 18%; font-weight: 600;">참여자 닉네임</th><th style="padding: 12px; font-size: 14px; color: #475569; width: 60%; font-weight: 600;">선택 구단 및 참여 시점 배당 정보</th><th style="padding: 12px; font-size: 14px; color: #475569; width: 15%; font-weight: 600;">최대 예상 리워드</th></tr></thead><tbody>{table_rows_html}</tbody></table>'
+            st.markdown(history_table_html, unsafe_allow_html=True)
+
+        st.markdown("</div>", unsafe_allow_html=True)
