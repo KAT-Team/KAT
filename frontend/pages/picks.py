@@ -3,6 +3,8 @@ import json
 import base64
 from datetime import datetime, timedelta
 import streamlit as st
+from backend.data.team_crawler import crawl_all_team_stats
+from backend.simulation.predict import calc_win_probability
 
 TEAM_NAME_KR = {
     "기아": "KIA", "삼성": "Samsung", "LG": "LG",
@@ -10,18 +12,19 @@ TEAM_NAME_KR = {
     "롯데": "Lotte", "한화": "Hanwha", "NC": "NC", "키움": "Kiwoom"
 }
 
-TEAM_STATS = {
-    "KIA": {"avg": ".291", "era": "3.95"},
-    "삼성": {"avg": ".268", "era": "4.21"},
-    "LG": {"avg": ".282", "era": "4.10"},
-    "두산": {"avg": ".275", "era": "4.45"},
-    "KT": {"avg": ".270", "era": "4.62"},
-    "SSG": {"avg": ".273", "era": "4.85"},
-    "롯데": {"avg": ".265", "era": "4.90"},
-    "한화": {"avg": ".261", "era": "4.55"},
-    "NC": {"avg": ".271", "era": "4.30"},
-    "키움": {"avg": ".258", "era": "5.12"}
-}
+@st.cache_data(ttl=3600)
+def load_team_stats():
+    stats = crawl_all_team_stats()
+    result = {}
+    for team_eng, data in stats.items():
+        team_kr = data.get("team_kr", team_eng)
+        result[team_kr] = {
+            "avg": data.get("avg_display", ".000"),
+            "era": data.get("era_display", "0.00")
+        }
+    return result
+
+TEAM_STATS = load_team_stats()
 
 TEAM_COLORS = {
     "KIA": "#EA0029",
@@ -240,8 +243,17 @@ def show():
             home_votes = votes_data["home"]
             total_votes = away_votes + home_votes
 
-            away_ratio_num = int(round((away_votes / total_votes) * 100))
-            home_ratio_num = 100 - away_ratio_num
+            try:
+                prob_result = calc_win_probability(
+                match["away_eng"], match["home_eng"],
+                "", "",  # 투수 정보 없으면 빈값
+                50, 50   # 컨디션 기본값
+                )
+                away_ratio_num = prob_result["away_prob"]
+                home_ratio_num = prob_result["home_prob"]
+            except Exception:
+                away_ratio_num = int(round((away_votes / total_votes) * 100))
+                home_ratio_num = 100 - away_ratio_num
 
             away_point_str = f"+{int(100 + (home_votes / away_votes) * 100)}P"
             home_point_str = f"+{int(100 + (away_votes / home_votes) * 100)}P"
