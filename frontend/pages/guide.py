@@ -85,7 +85,7 @@ def show():
         st.subheader(f"📍 {stadium.get('name', '')}")
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.info(f"🏟️ 수용 인원: {stadium.get('capacity', 0):,}명")
+            st.info(f"🏟️ 수용 좌석: {stadium.get('capacity', 0):,}석")
         with col2:
             parking = "✅ 주차 가능" if stadium.get("parking") else "❌ 주차 불가"
             st.info(f"🚗 {parking}")
