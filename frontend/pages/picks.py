@@ -120,14 +120,12 @@ def load_todays_matches_from_json():
 
     return todays_matches, target_date, date_caption
 
-
-# 데이터 사전 로드
 TODAYS_MATCHES, MATCH_DATE, DATE_CAPTION = load_todays_matches_from_json()
 
 def show():
     left_space, center_content, right_content, right_space = st.columns([1.5, 6, 2, 1.5])
 
-    # 1️⃣ [세션 상태 초기화] 변수들이 없으면 안전하게 생성
+    # 1️[세션 상태 초기화] 변수들이 없으면 안전하게 생성
     if "total_match_votes" not in st.session_state:
         st.session_state.total_match_votes = {
             i: {"away": 5, "home": 5} for i in range(len(TODAYS_MATCHES))
@@ -141,11 +139,11 @@ def show():
     if "vote_submitted" not in st.session_state:
         st.session_state.vote_submitted = False
 
-    # 🔥 [신규] 제출하는 순간의 팀과 포인트 스냅샷을 저장할 저장소
+    # [신규] 제출하는 순간의 팀과 포인트 스냅샷을 저장할 저장소
     if "submitted_picks_info" not in st.session_state:
         st.session_state.submitted_picks_info = []
 
-    # 💡 [콜백 함수 정의] 위젯 값이 바뀔 때 락(Lock) 없이 안전하게 세션과 싱크를 맞춤
+    # [콜백 함수 정의] 위젯 값이 바뀔 때 락(Lock) 없이 안전하게 세션과 싱크를 맞춤
     def on_away_change(index):
         key = f"chk_away_raw_{index}"
         if st.session_state[key]: # 원정을 체크했다면
@@ -164,20 +162,16 @@ def show():
             if st.session_state.user_current_picks[index] == "home":
                 st.session_state.user_current_picks[index] = "none"
 
-    # 2️⃣ 중앙 콘텐츠 영역: 경기 대진 목록 및 체크박스
     with center_content:
         st.markdown("### 🔮 승부 예측")
         st.markdown(f"<p style='font-size: 14px; color: gray;'>{DATE_CAPTION}</p>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # 📅 [6/9] 예정된 경기 라인업 헤더가 우측 '나의 예측 현황'과 정확히 같은 높이에 서게 됩니다.
         st.markdown(f"#### 📅 [{MATCH_DATE.month}/{MATCH_DATE.day}] 예정된 경기 라인업")
 
         if not TODAYS_MATCHES:
             st.info("당분간 예정된 KBO 경기 일정이 없습니다.")
             return
-
-        # 💡 [요청 반영] 성공 안내 문구(st.success) 줄을 깨끗하게 삭제했습니다.
 
         # 경기 라인업 카드 출력
         for i, match in enumerate(TODAYS_MATCHES):
@@ -289,7 +283,6 @@ def show():
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # 제출 버튼 제어
         button_label = "제출이 완료되었습니다" if st.session_state.vote_submitted else "승부예측 제출하기"
 
         if st.button(button_label, type="primary", use_container_width=True, disabled=st.session_state.vote_submitted):
@@ -339,10 +332,7 @@ def show():
             else:
                 st.warning("⚠️ 모든 경기의 승부를 예측해주세요.")
 
-
-    # 3️⃣ 👉 [우측 사이드 대시보드 영역 (3.5)]
     with right_content:
-        # 💡 왼쪽 레이아웃의 타이틀/설명글 높이만큼 공백을 주어 '나의 예측 현황'을 아래로 밀어내 눈높이를 맞춥니다.
         st.markdown("<div style='height: 120px;'></div>", unsafe_allow_html=True)
 
         st.markdown("### 📊 나의 예측 현황")
@@ -360,7 +350,6 @@ def show():
 
             total_potential_points = 0
 
-            # 🔥 [실시간 렌더링] total_match_votes 데이터를 실시간 조회하여 배당 포인트를 매번 재계산합니다.
             for i, match in enumerate(TODAYS_MATCHES):
                 user_pick = st.session_state.user_current_picks[i]
                 votes_data = st.session_state.total_match_votes[i]

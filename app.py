@@ -149,8 +149,6 @@ if 'page' in params:
 elif 'page' not in st.session_state:
     st.session_state.page = 'home'
 
-# --- 3. 상단 가로형 배너 구성 ---
-# Streamlit 컬럼 자체의 세로 정렬 갭을 줄이기 위해 빈 공간 분리를 제어하는 CSS 주입
 st.markdown("""
 <style>
     /* 상단 헤더 영역의 컬럼들이 상단에 딱 맞게 정렬되도록 강제 */
@@ -268,7 +266,7 @@ if st.session_state.page == 'home':
         }
 
         try:
-            import base64  # [추가] 이미지를 HTML에 직접 주입하기 위한 라이브러리
+            import base64
 
             now = pd.Timestamp.now()
             weekday_dict = {0: "월", 1: "화", 2: "수", 3: "목", 4: "금", 5: "토", 6: "일"}
@@ -323,8 +321,6 @@ if st.session_state.page == 'home':
                                 with open(home_local_path, "rb") as f_img:
                                     home_src = f"data:image/svg+xml;base64,{base64.b64encode(f_img.read()).decode()}"
 
-                            # [최종 해결] Streamlit이 무조건 HTML로 인식하는 테이블 구조로 변경
-                            # 높이 500px 원본 로고를 35px 크기로 선명하게 축소하여 정중앙에 수평 정렬합니다.
                             st.markdown(f"""
                             <table style="width:100%; border-collapse:collapse; background-color:#ffffff; border:1px solid #E2E8F0; border-radius:8px; text-align:center; margin-bottom:10px;">
                                 <tr style="height:45px;">
