@@ -149,51 +149,65 @@ if 'page' in params:
 elif 'page' not in st.session_state:
     st.session_state.page = 'home'
 
-# --- 3. 상단 가로형 배너 구성 ---
-header_col1, header_col2 = st.columns([1, 4])
+st.markdown("""
+<style>
+    /* 상단 헤더 영역의 컬럼들이 상단에 딱 맞게 정렬되도록 강제 */
+    div[data-testid="stColumn"] {
+        display: flex;
+        align-items: center; /* 세로 중앙 정렬 */
+    }
+    /* 버튼 내부 마진으로 인해 밀리는 현상 방지 */
+    .stButton > button {
+        margin-top: 0px !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# vertical_alignment="center" 옵션을 추가하여 내부 요소들이 항상 세로 중앙에 오도록 설정
+header_col1, header_col2 = st.columns([1, 4], vertical_alignment="center")
 
 with header_col1:
     st.markdown("""
     <div style="
         display: flex;
         align-items: center;
-        padding: 10px 0;
+        padding: 5px 0; /* 패딩을 살짝 줄여 안정감 확보 */
         gap: 12px;
     ">
         <span style="font-size:28px;">⚾</span>
         <div>
-            <span class="nav-logo-text">KAT</span>
-            <div class="nav-logo-sub">KBO ALL-IN-ONE TOOL</div>
+            <span class="nav-logo-text" style="line-height: 1.1; display: block;">KAT</span>
+            <div class="nav-logo-sub" style="line-height: 1.1; margin-top: 2px;">KBO ALL-IN-ONE TOOL</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # 네비게이션 버튼
-    with header_col2:
-        btn_col1, btn_col2, btn_col3, btn_col4, btn_col5 = st.columns(5)
-        with btn_col1:
-            if st.button("🏠 홈", use_container_width=True):
-                st.session_state.page = 'home'
-                st.query_params['page'] = 'home'
-                st.rerun()
-        with btn_col2:
-            if st.button("📅 경기 일정", use_container_width=True):
-                st.query_params['page'] = 'schedule'
-                st.rerun()
-        with btn_col3:
-            if st.button("🧭 직관도우미", use_container_width=True):
-                st.query_params['page'] = 'guide'
-                st.rerun()
-        with btn_col4:
-            if st.button("🏆 구단 순위", use_container_width=True):
-                st.query_params['page'] = 'ranking'
-                st.rerun()
-        with btn_col5:
-            if st.button("🆚 승부 예측", use_container_width=True):
-                st.query_params['page'] = 'picks'
-                st.rerun()
+# [주의] header_col2는 header_col1과 동등한 위치(들여쓰기 탈출)에 있어야 합니다.
+with header_col2:
+    btn_col1, btn_col2, btn_col3, btn_col4, btn_col5 = st.columns(5, vertical_alignment="center")
+    with btn_col1:
+        if st.button("🏠 홈", use_container_width=True):
+            st.session_state.page = 'home'
+            st.query_params['page'] = 'home'
+            st.rerun()
+    with btn_col2:
+        if st.button("📅 경기 일정", use_container_width=True):
+            st.query_params['page'] = 'schedule'
+            st.rerun()
+    with btn_col3:
+        if st.button("🧭 직관도우미", use_container_width=True):
+            st.query_params['page'] = 'guide'
+            st.rerun()
+    with btn_col4:
+        if st.button("🏆 구단 순위", use_container_width=True):
+            st.query_params['page'] = 'ranking'
+            st.rerun()
+    with btn_col5:
+        if st.button("🆚 승부 예측", use_container_width=True):
+            st.query_params['page'] = 'picks'
+            st.rerun()
 
-        st.divider()
+st.divider()
 
 # 4. 페이지 라우팅
 if st.session_state.page == 'home':
@@ -252,7 +266,7 @@ if st.session_state.page == 'home':
         }
 
         try:
-            import base64  # [추가] 이미지를 HTML에 직접 주입하기 위한 라이브러리
+            import base64
 
             now = pd.Timestamp.now()
             weekday_dict = {0: "월", 1: "화", 2: "수", 3: "목", 4: "금", 5: "토", 6: "일"}
@@ -307,8 +321,6 @@ if st.session_state.page == 'home':
                                 with open(home_local_path, "rb") as f_img:
                                     home_src = f"data:image/svg+xml;base64,{base64.b64encode(f_img.read()).decode()}"
 
-                            # [최종 해결] Streamlit이 무조건 HTML로 인식하는 테이블 구조로 변경
-                            # 높이 500px 원본 로고를 35px 크기로 선명하게 축소하여 정중앙에 수평 정렬합니다.
                             st.markdown(f"""
                             <table style="width:100%; border-collapse:collapse; background-color:#ffffff; border:1px solid #E2E8F0; border-radius:8px; text-align:center; margin-bottom:10px;">
                                 <tr style="height:45px;">
