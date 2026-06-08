@@ -209,6 +209,10 @@ def show():
                             {{ center: center, level: 5 }}
                         );
 
+                        // 줌 +/- 버튼
+                        var zoomControl = new kakao.maps.ZoomControl();
+                        map.addControl(zoomControl, kakao.maps.ControlPosition.RIGHT);
+
                         // 경기장 마커
                         var marker = new kakao.maps.Marker({{ position: center }});
                         marker.setMap(map);
@@ -240,7 +244,11 @@ def show():
 
                 # ── 경기장 자체 주차 정보 ──
                 st.divider()
-                if stadium.get("parking"):
+                stadium_name = stadium.get("name", "")
+                if selected_team == "Kiwoom" or "고척" in stadium_name:
+                    st.warning("⚠️ 경기장 주차장은 **관계자 전용**으로 일반 관람객은 이용할 수 없습니다. "
+                               "주변 주차장이나 대중교통을 이용하세요.")
+                elif stadium.get("parking"):
                     st.success("✅ 경기장 주차 가능")
                     st.write("- 경기 시작 2시간 전부터 입차 가능")
                     st.write("- 경기 종료 후 혼잡 예상, 대중교통 이용 권장")
