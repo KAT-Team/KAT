@@ -168,8 +168,8 @@ def show():
     # 👤 [닉네임 입력 및 중복 검증 모달 팝업]
     @st.dialog("👤 참여자 닉네임 등록")
     def open_nickname_dialog():
-        st.write("예측 피드에 기록될 닉네임을 입력하세요. (여러 번 참여 가능하나 중복 닉네임은 불가능합니다.)")
-        input_nickname = st.text_input("닉네임 입력 (최대 10자)", max_chars=10, placeholder="예: 한화이글스화이팅").strip()
+        st.write("예측 피드에 기록될 닉네임을 입력하세요. (중복 닉네임은 불가능합니다.)")
+        input_nickname = st.text_input("닉네임 입력 (최대 10자)", max_chars=10, placeholder="").strip()
 
         existing_nicknames = [record["nickname"] for record in st.session_state.vote_history]
 
