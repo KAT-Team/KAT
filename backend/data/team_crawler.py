@@ -7,6 +7,7 @@ KBO 팀 스탯 크롤링 모듈
 
 import requests
 from bs4 import BeautifulSoup
+import streamlit as st
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
@@ -207,6 +208,7 @@ def crawl_team_pitching() -> dict:
         return {}
 
 
+@st.cache_data(ttl=3600)
 def crawl_all_team_stats() -> dict:
     """
     팀 전체 스탯 통합 크롤링

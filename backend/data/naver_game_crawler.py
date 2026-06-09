@@ -27,8 +27,9 @@ def get_today_results() -> list:
         }, ...
     ]
     """
-    today = datetime.now().strftime("%Y-%m-%d")
-    url = f"https://api-gw.sports.naver.com/schedule/games?fields=basic%2Cschedule%2Cbaseball%2CmanualRelayUrl&upperCategoryId=kbaseball&fromDate={today}&toDate={today}&size=500"
+    start_date = "2026-03-28"
+    end_date = datetime.now().strftime("%Y-%m-%d")
+    url = f"https://api-gw.sports.naver.com/schedule/games?fields=basic%2Cschedule%2Cbaseball%2CmanualRelayUrl&upperCategoryId=kbaseball&fromDate={start_date}&toDate={end_date}&size=500"
 
     try:
         res = requests.get(url, headers=HEADERS, timeout=5)
@@ -71,6 +72,56 @@ def get_today_results() -> list:
 
     except Exception as e:
         print(f"네이버 경기 결과 크롤링 오류: {e}")
+        return []
+def get_all_results(start_date: str = "2026-03-28") -> list:
+    """
+    시즌 시작부터 오늘까지 전체 경기 결과 반환
+    """
+    end_date = datetime.now().strftime("%Y-%m-%d")
+    url = f"https://api-gw.sports.naver.com/schedule/games?fields=basic%2Cschedule%2Cbaseball%2CmanualRelayUrl&upperCategoryId=kbaseball&fromDate={start_date}&toDate={end_date}&size=500"
+
+    try:
+        res = requests.get(url, headers=HEADERS, timeout=5)
+        data = res.json()
+        games = data.get("result", {}).get("games", [])
+
+        results = []
+        for game in games:
+            if game.get("categoryId") != "kbo":
+                continue
+
+            home_code = game.get("homeTeamCode", "")
+            away_code = game.get("awayTeamCode", "")
+            home_eng = NAVER_TEAM_CODE.get(home_code, home_code)
+            away_eng = NAVER_TEAM_CODE.get(away_code, away_code)
+            home_score = game.get("homeTeamScore", 0)
+            away_score = game.get("awayTeamScore", 0)
+            status = game.get("statusCode", "")
+            raw_winner = game.get("winner", "")
+
+            if raw_winner == "HOME":
+                winner = "home"
+            elif raw_winner == "AWAY":
+                winner = "away"
+            else:
+                winner = "draw"
+
+            results.append({
+                "date": game.get("gameDate", ""),
+                "home": home_eng,
+                "away": away_eng,
+                "home_score": home_score,
+                "away_score": away_score,
+                "status": status,
+                "winner": winner,
+                "stadium": game.get("stadium", ""),
+                "game_id": game.get("gameId", "")
+            })
+
+        return results
+
+    except Exception as e:
+        print(f"전체 경기 결과 크롤링 오류: {e}")
         return []
 
 
