@@ -186,15 +186,28 @@ def show():
                 return
 
             current_submission_picks = []
-            submission_total_points = 0  # 💡 하단 피드 테이블 전송용 총 포인트 변수 추가
+            submission_total_points = 0
 
             for idx in range(len(TODAYS_MATCHES)):
                 match = TODAYS_MATCHES[idx]
                 user_pick = st.session_state.user_current_picks[idx]
                 votes_data = st.session_state.total_match_votes[idx]
 
-                calc_away_p = int(100 + (votes_data["home"] / votes_data["away"]) * 100)
-                calc_home_p = int(100 + (votes_data["away"] / votes_data["home"]) * 100)
+                # 💡 [버그 수정 1] 제출 시에도 시뮬레이션 승률을 호출하여 동적 배당 계산
+                try:
+                    prob_result = calc_win_probability(
+                        match["away_eng"], match["home_eng"], "", "", 50, 50
+                    )
+                    away_ratio_num = prob_result["away_prob"]
+                    home_ratio_num = prob_result["home_prob"]
+                except Exception:
+                    away_votes = votes_data["away"]
+                    home_votes = votes_data["home"]
+                    away_ratio_num = int(round((away_votes / (away_votes + home_votes)) * 100))
+                    home_ratio_num = 100 - away_ratio_num
+
+                calc_away_p = int(100 + (home_ratio_num / away_ratio_num) * 100)
+                calc_home_p = int(100 + (away_ratio_num / home_ratio_num) * 100)
 
                 if user_pick == "away":
                     chosen_team = match["away"]
@@ -206,13 +219,13 @@ def show():
                     st.session_state.total_match_votes[idx]["home"] += 1
 
                 current_submission_picks.append(f"<b>{chosen_team}</b>({chosen_p}P)")
-                submission_total_points += chosen_p  # 각 경기 포인트를 누적 합산
+                submission_total_points += chosen_p
 
             st.session_state.vote_history.append({
                 "no": len(st.session_state.vote_history) + 1,
                 "nickname": input_nickname,
                 "picks": " , ".join(current_submission_picks),
-                "total_points": submission_total_points  # 💡 히스토리에 총 획득 가능 포인트 저장
+                "total_points": submission_total_points
             })
 
             for idx in range(len(TODAYS_MATCHES)):
@@ -245,9 +258,7 @@ def show():
 
             try:
                 prob_result = calc_win_probability(
-                match["away_eng"], match["home_eng"],
-                "", "",  # 투수 정보 없으면 빈값
-                50, 50   # 컨디션 기본값
+                    match["away_eng"], match["home_eng"], "", "", 50, 50
                 )
                 away_ratio_num = prob_result["away_prob"]
                 home_ratio_num = prob_result["home_prob"]
@@ -255,8 +266,8 @@ def show():
                 away_ratio_num = int(round((away_votes / total_votes) * 100))
                 home_ratio_num = 100 - away_ratio_num
 
-            away_point_str = f"+{int(100 + (home_votes / away_votes) * 100)}P"
-            home_point_str = f"+{int(100 + (away_votes / home_votes) * 100)}P"
+            away_point_str = f"+{int(100 + (home_ratio_num / away_ratio_num) * 100)}P"
+            home_point_str = f"+{int(100 + (away_ratio_num / home_ratio_num) * 100)}P"
 
             COLOR_BLUE = "#3182CE"
             COLOR_BLACK = "#1A202C"
@@ -364,9 +375,20 @@ def show():
                 if user_pick == "none":
                     continue
 
-                votes_data = st.session_state.total_match_votes[i]
-                calc_away_p = int(100 + (votes_data["home"] / votes_data["away"]) * 100)
-                calc_home_p = int(100 + (votes_data["away"] / votes_data["home"]) * 100)
+                # 💡 [버그 수정 2] 우측 패널에도 시뮬레이션 확률을 가져와 완벽한 포인트 싱크 보정
+                try:
+                    prob_result = calc_win_probability(
+                        match["away_eng"], match["home_eng"], "", "", 50, 50
+                    )
+                    away_ratio_num = prob_result["away_prob"]
+                    home_ratio_num = prob_result["home_prob"]
+                except Exception:
+                    votes_data = st.session_state.total_match_votes[i]
+                    away_ratio_num = int(round((votes_data["away"] / (votes_data["away"] + votes_data["home"])) * 100))
+                    home_ratio_num = 100 - away_ratio_num
+
+                calc_away_p = int(100 + (home_ratio_num / away_ratio_num) * 100)
+                calc_home_p = int(100 + (away_ratio_num / home_ratio_num) * 100)
 
                 if user_pick == "away":
                     team_name, team_color, current_p = match["away"], TEAM_COLORS.get(match["away_eng"], "#1A202C"), calc_away_p
@@ -384,7 +406,7 @@ def show():
     st.markdown("<div class='feed-container'>", unsafe_allow_html=True)
     st.markdown("---")
 
-    left_space, center_content, right_space= st.columns([1.5, 8, 1.5])
+    left_space, center_content, right_space = st.columns([1.5, 8, 1.5])
     with center_content:
         st.markdown("### 📜 승부예측 유저 참여 현황")
         st.markdown("<p style='font-size: 14px; color: gray;'>유저들이 등록한 승부예측 기록이 실시간으로 하단에 누적됩니다. (최근 제출 순서 상단 정렬)</p>", unsafe_allow_html=True)
@@ -394,14 +416,11 @@ def show():
         else:
             table_rows_html = ""
             for record in st.session_state.vote_history[::-1]:
-                # 💡 기존 데이터와 호환성을 맞추기 위해 초기 더미데이터 등 total_points 키가 없는 경우 기본값 0P 처리
                 pts = record.get("total_points", 0)
                 formatted_pts = f"{pts:,} P" if pts > 0 else "-"
 
-                # 💡 [우측 열 추가] 맨 오른쪽에 '최대 예상 리워드' 데이터를 랜더링하는 <td> 추가
                 table_rows_html += f'<tr style="border-bottom: 1px solid #E2E8F0; background: transparent;"><td style="padding: 12px; font-size: 13px; color: #64748B; font-weight: bold; background: transparent;">{record["no"]}</td><td style="padding: 12px; font-size: 14px; color: #1E293B; font-weight: bold; background: transparent;">👤 {record["nickname"]}</td><td style="padding: 12px; font-size: 13px; color: #334155; line-height: 1.5; background: transparent;">{record["picks"]}</td><td style="padding: 12px; font-size: 14px; color: #3182CE; font-weight: bold; background: transparent;">{formatted_pts}</td></tr>'
 
-            # 💡 [헤더 추가 및 비율 조절] 총 100% 비율 내에서 우측에 열(15% 부여)을 신설하고 기존 열 비율 재조정
             history_table_html = f'<table style="width:100%; border-collapse: collapse; margin-top:14px; text-align: left; background-color: #FFFFFF; border-radius: 8px; border: 1px solid #E2E8F0;"><thead><tr style="background-color: #F1F5F9; border-bottom: 2px solid #CBD5E1;"><th style="padding: 12px; font-size: 14px; color: #475569; width: 7%; font-weight: 600;">순번</th><th style="padding: 12px; font-size: 14px; color: #475569; width: 18%; font-weight: 600;">참여자 닉네임</th><th style="padding: 12px; font-size: 14px; color: #475569; width: 60%; font-weight: 600;">선택 구단 및 참여 시점 배당 정보</th><th style="padding: 12px; font-size: 14px; color: #475569; width: 15%; font-weight: 600;">최대 예상 리워드</th></tr></thead><tbody>{table_rows_html}</tbody></table>'
             st.markdown(history_table_html, unsafe_allow_html=True)
 
