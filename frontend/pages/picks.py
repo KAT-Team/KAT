@@ -116,6 +116,8 @@ def load_todays_matches_from_json():
 TODAYS_MATCHES, MATCH_DATE, DATE_CAPTION = load_todays_matches_from_json()
 
 def show():
+    # 크롤링 한 번만 실행
+    cached_stats = crawl_all_team_stats()
 
     # 전역 스타일 패치: 카드 하단 검은색 사각형 찌꺼기 방지 및 투명도 유지
     st.markdown("""
