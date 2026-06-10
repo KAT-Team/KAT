@@ -27,10 +27,8 @@ def get_today_results() -> list:
         }, ...
     ]
     """
-    start_date = "2026-03-28"
-    end_date = datetime.now().strftime("%Y-%m-%d")
-    url = f"https://api-gw.sports.naver.com/schedule/games?fields=basic%2Cschedule%2Cbaseball%2CmanualRelayUrl&upperCategoryId=kbaseball&fromDate={start_date}&toDate={end_date}&size=500"
-
+    today = datetime.now().strftime("%Y-%m-%d")
+    url = f"https://api-gw.sports.naver.com/schedule/games?fields=basic%2Cschedule%2Cbaseball%2CmanualRelayUrl&upperCategoryId=kbaseball&fromDate={today}&toDate={today}&size=500"
     try:
         res = requests.get(url, headers=HEADERS, timeout=5)
         data = res.json()

@@ -198,7 +198,7 @@ def show():
                 # 💡 [버그 수정 1] 제출 시에도 시뮬레이션 승률을 호출하여 동적 배당 계산
                 try:
                     prob_result = calc_win_probability(
-                        match["away_eng"], match["home_eng"], "", "", 50, 50
+                        match["home_eng"], match["away_eng"], "", "", 50, 50
                     )
                     away_ratio_num = prob_result["away_prob"]
                     home_ratio_num = prob_result["home_prob"]
@@ -260,7 +260,7 @@ def show():
 
             try:
                 prob_result = calc_win_probability(
-                    match["away_eng"], match["home_eng"], "", "", 50, 50
+                    match["home_eng"], match["away_eng"], "", "", 50, 50
                 )
                 away_ratio_num = prob_result["away_prob"]
                 home_ratio_num = prob_result["home_prob"]
@@ -380,7 +380,7 @@ def show():
                 # 💡 [버그 수정 2] 우측 패널에도 시뮬레이션 확률을 가져와 완벽한 포인트 싱크 보정
                 try:
                     prob_result = calc_win_probability(
-                        match["away_eng"], match["home_eng"], "", "", 50, 50
+                        match["home_eng"], match["away_eng"], "", "", 50, 50
                     )
                     away_ratio_num = prob_result["away_prob"]
                     home_ratio_num = prob_result["home_prob"]
