@@ -71,10 +71,9 @@ def calc_win_probability(
     home_condition_bonus = (home_condition - 50) * 0.002
     away_condition_bonus = (away_condition - 50) * 0.002
 
-    # 4. 투수 ERA 보정
-    # ERA가 낮을수록 유리 (평균 ERA 4.00 기준)
-    home_era = home_pitcher_stats.get("era", 4.00) if home_pitcher_stats else 4.00
-    away_era = away_pitcher_stats.get("era", 4.00) if away_pitcher_stats else 4.00
+    # 4. 투수 ERA 보정 (팀 ERA 기반)
+    home_era = home_crawl.get("era", 4.00)
+    away_era = away_crawl.get("era", 4.00)
     era_bonus = (away_era - home_era) * 0.01
 
     # 5. 최종 확률 계산
