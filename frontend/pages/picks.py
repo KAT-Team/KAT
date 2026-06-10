@@ -386,6 +386,65 @@ def show():
                 with col_chk_home:
                     st.checkbox("", key=f"chk_home_raw_{i}", label_visibility="collapsed", on_change=on_home_change, args=(i,))
 
+                # 파라미터 시각화 추가
+                if prob_result:
+                    factors = prob_result.get("factors", {})
+                    away_color = TEAM_COLORS.get(match["away_eng"], "#333333")
+                    home_color = TEAM_COLORS.get(match["home_eng"], "#333333")
+
+                    params_home = [
+                        ("기본 승률", factors.get("base_prob", 50), 50),
+                        ("홈 어드밴티지", factors.get("home_advantage", 0), 0),
+                        ("ERA 보정", factors.get("era_bonus", 0), 0),
+                        ("득점력 보정", factors.get("run_diff_bonus", 0), 0),
+                        ("OPS 보정", factors.get("ops_bonus", 0), 0),
+                    ]
+                    params_away = [
+                        ("기본 승률", 100 - factors.get("base_prob", 50), 50),
+                        ("홈 어드밴티지", -factors.get("home_advantage", 0), 0),
+                        ("ERA 보정", -factors.get("era_bonus", 0), 0),
+                        ("득점력 보정", -factors.get("run_diff_bonus", 0), 0),
+                        ("OPS 보정", -factors.get("ops_bonus", 0), 0),
+                    ]
+
+                    def make_rows(params, color):
+                        rows = ""
+                        for label, value, baseline in params:
+                            diff = value - baseline
+                            bar_width = min(abs(value), 100)
+                            c = color if diff >= 0 else "#aaaaaa"
+                            rows += (
+                                '<div style="display:flex; align-items:center; gap:8px; margin:3px 0; font-size:11px;">'
+                                '<div style="width:90px; color:#666; text-align:right;">' + label + '</div>'
+                                '<div style="width:150px; background:#f0f0f0; border-radius:4px; height:10px;">'
+                                '<div style="width:' + str(bar_width) + '%; background:' + c + '; border-radius:4px; height:10px;"></div>'
+                                '</div>'
+                                '<div style="color:' + c + '; font-weight:bold; width:50px;">' + f"{value:+.1f}%" + '</div>'
+                                '</div>'
+                            )
+                        return rows
+
+                    rows_away = make_rows(params_away, away_color)
+                    rows_home = make_rows(params_home, home_color)
+
+                    final_html = (
+                        '<div style="display:flex; gap:16px; padding:8px 16px; border-top:1px solid #f0f0f0; margin-top:4px;">'
+                        '<div style="flex:1;">'
+                        '<div style="font-size:11px; color:#888; margin-bottom:6px;">📊 원정팀(' + match["away"] + ') 기준</div>'
+                        + rows_away +
+                        '<div style="font-size:11px; font-weight:bold; color:' + away_color + '; margin-top:6px;">→ 원정팀 승리 확률: ' + str(away_ratio_num) + '%</div>'
+                        '</div>'
+                        '<div style="width:1px; background:#e0e0e0;"></div>'
+                        '<div style="flex:1;">'
+                        '<div style="font-size:11px; color:#888; margin-bottom:6px;">📊 홈팀(' + match["home"] + ') 기준</div>'
+                        + rows_home +
+                        '<div style="font-size:11px; font-weight:bold; color:' + home_color + '; margin-top:6px; text-align:right;">→ 홈팀 승리 확률: ' + str(home_ratio_num) + '%</div>'
+                        '</div>'
+                        '</div>'
+                    )
+                    st.markdown(final_html, unsafe_allow_html=True)
+
+
         st.markdown("<br>", unsafe_allow_html=True)
 
         if st.button("승부예측 제출하기", type="primary", use_container_width=True):
