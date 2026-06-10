@@ -224,12 +224,9 @@ def draw_schedule_table(schedule_df: pd.DataFrame) -> None:
                 elif status == "LIVE" or status == "STARTED":
                     vs_bg = "#FEE2E2"
                     vs_text = "LIVE"
-                elif cancel:
+                elif cancel or suspended:
                     vs_bg = "#FEF9C3"
                     vs_text = "취소"
-                elif suspended:
-                    vs_bg = "#FEF9C3"
-                    vs_text = "우천취소"
                 else:
                     vs_bg = "#FFFFFF"
                     vs_text = "예정"
