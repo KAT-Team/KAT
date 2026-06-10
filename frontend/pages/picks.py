@@ -113,7 +113,38 @@ def load_todays_matches_from_json():
 
     return todays_matches, target_date, date_caption
 
+# 일치하는 파일 로드를 위해 전역 변수 선언 시점 확보
 TODAYS_MATCHES, MATCH_DATE, DATE_CAPTION = load_todays_matches_from_json()
+
+
+# 💾 [추가] 파일 IO 관련 유틸리티 함수 정의
+def get_history_file_path(date_obj) -> str:
+    """경기 날짜 기준 파일 경로 반환 (예: backend/data/vote_history/vote_history_20260609.json)"""
+    dir_path = os.path.join("backend", "data", "vote_history")
+    os.makedirs(dir_path, exist_ok=True)
+    filename = f"vote_history_{date_obj.strftime('%Y%m%d')}.json"
+    return os.path.join(dir_path, filename)
+
+def load_vote_history_from_file(date_obj) -> list:
+    """파일로부터 해당 날짜의 예측 기록 목록 로드"""
+    file_path = get_history_file_path(date_obj)
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            st.error(f"⚠️ 기록 파일 읽기 실패: {e}")
+    return []
+
+def save_vote_history_to_file(date_obj, history_list):
+    """파일에 예측 기록 리스트 저장"""
+    file_path = get_history_file_path(date_obj)
+    try:
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(history_list, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        st.error(f"⚠️ 기록 파일 저장 실패: {e}")
+
 
 def show():
     # 크롤링 한 번만 실행
@@ -148,8 +179,9 @@ def show():
     if "user_current_picks" not in st.session_state:
         st.session_state.user_current_picks = {i: "none" for i in range(len(TODAYS_MATCHES))}
 
+    # 💾 [수정] 앱이 재구동되거나 새로고침 시 로컬 JSON 파일로부터 영구 보관된 내역 불러오기
     if "vote_history" not in st.session_state:
-        st.session_state.vote_history = []
+        st.session_state.vote_history = load_vote_history_from_file(MATCH_DATE)
 
     # [체크박스 콜백 함수 정의]
     def on_away_change(index):
@@ -176,7 +208,9 @@ def show():
         st.write("예측 피드에 기록될 닉네임을 입력하세요. (중복 닉네임은 불가능합니다.)")
         input_nickname = st.text_input("닉네임 입력 (최대 10자)", max_chars=10, placeholder="").strip()
 
-        existing_nicknames = [record["nickname"] for record in st.session_state.vote_history]
+        # 💾 [수정] 실시간 무결성을 위해 메모리 외 파일 데이터도 함께 중복 크로스체크
+        file_history = load_vote_history_from_file(MATCH_DATE)
+        existing_nicknames = [record["nickname"] for record in file_history]
 
         if st.button("예측 제출 및 등록하기", type="primary", use_container_width=True):
             if not input_nickname:
@@ -195,10 +229,9 @@ def show():
                 user_pick = st.session_state.user_current_picks[idx]
                 votes_data = st.session_state.total_match_votes[idx]
 
-                # 💡 [버그 수정 1] 제출 시에도 시뮬레이션 승률을 호출하여 동적 배당 계산
                 try:
                     prob_result = calc_win_probability(
-                        match["away_eng"], match["home_eng"], "", "", 50, 50
+                        match["home_eng"], match["away_eng"], "", "", 50, 50
                     )
                     away_ratio_num = prob_result["away_prob"]
                     home_ratio_num = prob_result["home_prob"]
@@ -223,12 +256,18 @@ def show():
                 current_submission_picks.append(f"<b>{chosen_team}</b>({chosen_p}P)")
                 submission_total_points += chosen_p
 
-            st.session_state.vote_history.append({
-                "no": len(st.session_state.vote_history) + 1,
+            # 데이터 객체 생성
+            new_record = {
+                "no": len(file_history) + 1,
                 "nickname": input_nickname,
                 "picks": " , ".join(current_submission_picks),
                 "total_points": submission_total_points
-            })
+            }
+
+            # 💾 [수정] 메모리 갱신 및 파일 입출력 동시 영구 저장 실행
+            file_history.append(new_record)
+            save_vote_history_to_file(MATCH_DATE, file_history)
+            st.session_state.vote_history = file_history
 
             for idx in range(len(TODAYS_MATCHES)):
                 st.session_state.user_current_picks[idx] = "none"
@@ -260,7 +299,7 @@ def show():
 
             try:
                 prob_result = calc_win_probability(
-                    match["away_eng"], match["home_eng"], "", "", 50, 50
+                    match["home_eng"], match["away_eng"], "", "", 50, 50
                 )
                 away_ratio_num = prob_result["away_prob"]
                 home_ratio_num = prob_result["home_prob"]
@@ -377,10 +416,9 @@ def show():
                 if user_pick == "none":
                     continue
 
-                # 💡 [버그 수정 2] 우측 패널에도 시뮬레이션 확률을 가져와 완벽한 포인트 싱크 보정
                 try:
                     prob_result = calc_win_probability(
-                        match["away_eng"], match["home_eng"], "", "", 50, 50
+                        match["home_eng"], match["away_eng"], "", "", 50, 50
                     )
                     away_ratio_num = prob_result["away_prob"]
                     home_ratio_num = prob_result["home_prob"]
