@@ -230,24 +230,24 @@ if st.session_state.page == 'home':
         row1_col1, row1_col2 = st.columns(2)
         with row1_col1:
             if st.button("📅 경기 일정\n\nKBO 10개 구단 일정을 확인하세요.", use_container_width=True):
-                st.session_state.page = 'schedule'
+                st.query_params['page'] = 'schedule'
                 st.rerun()
 
         with row1_col2:
             if st.button("🧭 직관 도우미\n\n날씨, 교통 가이드 완벽 지원", use_container_width=True):
-                st.session_state.page = 'guide'
+                st.query_params['page'] = 'guide'
                 st.rerun()
 
         # 2행: 구단 순위 & 승부 예측
         row2_col1, row2_col2 = st.columns(2)
         with row2_col1:
             if st.button("🏆 구단 순위\n\n실시간 KBO 순위표 확인", use_container_width=True):
-                st.session_state.page = 'ranking'
+                st.query_params['page'] = 'ranking'
                 st.rerun()
 
         with row2_col2:
             if st.button("🆚 승부 예측\n\n실시간 투표율 연동 리워드 예측", use_container_width=True):
-                st.session_state.page = 'picks'
+                st.query_params['page'] = 'picks'
                 st.rerun()
 
         st.markdown("### 🏟️ 오늘 예정된 경기")
