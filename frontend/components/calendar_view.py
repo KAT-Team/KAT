@@ -89,8 +89,9 @@ def draw_schedule_table(schedule_df: pd.DataFrame) -> None:
     now = datetime.now()
     default_day = now.day if now.month == data_month else 2
 
-    if "selected_day" not in st.session_state:
+    if "selected_day" not in st.session_state or "current_month" not in st.session_state or st.session_state.current_month != data_month:
         st.session_state.selected_day = default_day
+        st.session_state.current_month = data_month
 
     if "current_start_day" not in st.session_state:
         calculated_start = default_day - 2
@@ -139,7 +140,7 @@ def draw_schedule_table(schedule_df: pd.DataFrame) -> None:
     # 🔘 중앙 8개 버튼
     col_idx = 1
     for d in range(start_d, end_d + 1):
-        weekday_str = days_of_week[(d - 1) % 7]
+        weekday_str = days_of_week[datetime(now.year, data_month, d).weekday()]
         if d == default_day and now.month == data_month:
             weekday_str = "오늘"
 
