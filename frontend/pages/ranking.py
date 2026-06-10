@@ -79,7 +79,7 @@ def load_ranking_data() -> pd.DataFrame:
         expected_final_wins = win + (remained_games * expected_future_win_rate)
 
         # 시그모이드 함수를 이용한 최종 가을야구 진출 확률
-        ps_probability = 1 / (1 + math.exp(-(expected_final_wins - 70.8) * 0.135))
+        ps_probability = 1 / (1 + math.exp(-(expected_final_wins - 70.8) * 0.185))
         postseason_pct = round(ps_probability * 100, 1)
 
         rows.append(
