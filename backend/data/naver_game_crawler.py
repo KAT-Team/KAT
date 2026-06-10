@@ -27,10 +27,8 @@ def get_today_results() -> list:
         }, ...
     ]
     """
-    start_date = "2026-03-28"
-    end_date = datetime.now().strftime("%Y-%m-%d")
-    url = f"https://api-gw.sports.naver.com/schedule/games?fields=basic%2Cschedule%2Cbaseball%2CmanualRelayUrl&upperCategoryId=kbaseball&fromDate={start_date}&toDate={end_date}&size=500"
-
+    today = datetime.now().strftime("%Y-%m-%d")
+    url = f"https://api-gw.sports.naver.com/schedule/games?fields=basic%2Cschedule%2Cbaseball%2CmanualRelayUrl&upperCategoryId=kbaseball&fromDate={today}&toDate={today}&size=500"
     try:
         res = requests.get(url, headers=HEADERS, timeout=5)
         data = res.json()
@@ -73,56 +71,75 @@ def get_today_results() -> list:
     except Exception as e:
         print(f"네이버 경기 결과 크롤링 오류: {e}")
         return []
+
 def get_all_results(start_date: str = "2026-03-28") -> list:
     """
-    시즌 시작부터 오늘까지 전체 경기 결과 반환
+    시즌 시작부터 오늘까지 전체 경기 결과 반환 (월별로 나눠서 요청)
     """
+    from datetime import timedelta
+
+    all_results = []
     end_date = datetime.now().strftime("%Y-%m-%d")
-    url = f"https://api-gw.sports.naver.com/schedule/games?fields=basic%2Cschedule%2Cbaseball%2CmanualRelayUrl&upperCategoryId=kbaseball&fromDate={start_date}&toDate={end_date}&size=500"
+    current = datetime.strptime(start_date, "%Y-%m-%d")
+    end = datetime.strptime(end_date, "%Y-%m-%d")
 
-    try:
-        res = requests.get(url, headers=HEADERS, timeout=5)
-        data = res.json()
-        games = data.get("result", {}).get("games", [])
+    while current <= end:
+        # 해당 월의 마지막 날 계산
+        if current.month == 12:
+            month_end = current.replace(year=current.year+1, month=1, day=1) - timedelta(days=1)
+        else:
+            month_end = current.replace(month=current.month+1, day=1) - timedelta(days=1)
 
-        results = []
-        for game in games:
-            if game.get("categoryId") != "kbo":
-                continue
+        to_date = min(month_end, end).strftime("%Y-%m-%d")
+        from_date = current.strftime("%Y-%m-%d")
 
-            home_code = game.get("homeTeamCode", "")
-            away_code = game.get("awayTeamCode", "")
-            home_eng = NAVER_TEAM_CODE.get(home_code, home_code)
-            away_eng = NAVER_TEAM_CODE.get(away_code, away_code)
-            home_score = game.get("homeTeamScore", 0)
-            away_score = game.get("awayTeamScore", 0)
-            status = game.get("statusCode", "")
-            raw_winner = game.get("winner", "")
+        url = f"https://api-gw.sports.naver.com/schedule/games?fields=basic%2Cschedule%2Cbaseball%2CmanualRelayUrl&upperCategoryId=kbaseball&fromDate={from_date}&toDate={to_date}&size=500"
 
-            if raw_winner == "HOME":
-                winner = "home"
-            elif raw_winner == "AWAY":
-                winner = "away"
-            else:
-                winner = "draw"
+        try:
+            res = requests.get(url, headers=HEADERS, timeout=5)
+            games = res.json().get("result", {}).get("games", [])
 
-            results.append({
-                "date": game.get("gameDate", ""),
-                "home": home_eng,
-                "away": away_eng,
-                "home_score": home_score,
-                "away_score": away_score,
-                "status": status,
-                "winner": winner,
-                "stadium": game.get("stadium", ""),
-                "game_id": game.get("gameId", "")
-            })
+            for game in games:
+                if game.get("categoryId") != "kbo":
+                    continue
 
-        return results
+                home_code = game.get("homeTeamCode", "")
+                away_code = game.get("awayTeamCode", "")
+                home_eng = NAVER_TEAM_CODE.get(home_code, home_code)
+                away_eng = NAVER_TEAM_CODE.get(away_code, away_code)
+                home_score = game.get("homeTeamScore", 0)
+                away_score = game.get("awayTeamScore", 0)
+                status = game.get("statusCode", "")
+                raw_winner = game.get("winner", "")
 
-    except Exception as e:
-        print(f"전체 경기 결과 크롤링 오류: {e}")
-        return []
+                if raw_winner == "HOME":
+                    winner = "home"
+                elif raw_winner == "AWAY":
+                    winner = "away"
+                else:
+                    winner = "draw"
+
+                all_results.append({
+                    "date": game.get("gameDate", ""),
+                    "home": home_eng,
+                    "away": away_eng,
+                    "home_score": home_score,
+                    "away_score": away_score,
+                    "status": status,
+                    "winner": winner,
+                    "stadium": game.get("stadium", ""),
+                    "game_id": game.get("gameId", ""),
+                    "cancel": game.get("cancel", False),
+                    "suspended": game.get("suspended", False)
+                })
+
+        except Exception as e:
+            print(f"경기 결과 크롤링 오류 ({from_date}): {e}")
+
+        current = month_end + timedelta(days=1)
+
+    return all_results
+
 
 
 if __name__ == "__main__":

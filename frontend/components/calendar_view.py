@@ -4,14 +4,14 @@
 - plotly 활용
 """
 
-import datetime
+from datetime import datetime
 import os
 import base64
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from backend.data.collect import TEAMS
-from backend.data.naver_game_crawler import get_today_results
+from backend.data.naver_game_crawler import get_all_results
 
 # 구단별 고유 색상 (HEX 코드)
 TEAM_COLORS = {
@@ -86,7 +86,7 @@ def draw_schedule_table(schedule_df: pd.DataFrame) -> None:
         data_month = 6
 
     # 1. 📅 세션 상태 초기화
-    now = datetime.datetime.now()
+    now = datetime.now()
     default_day = now.day if now.month == data_month else 2
 
     if "selected_day" not in st.session_state:
@@ -174,7 +174,8 @@ def draw_schedule_table(schedule_df: pd.DataFrame) -> None:
     is_today_selected = (st.session_state.selected_day == default_day and now.month == data_month)
 
     # 💡 [핵심 연동] 선택된 날짜가 오늘이면 실시간 크롤러 데이터를 가져옵니다.
-    today_live_results = get_today_results() if is_today_selected else []
+    selected_date_str = f"{now.year}-{data_month:02d}-{st.session_state.selected_day:02d}"
+    today_live_results = [r for r in get_all_results() if r.get("date") == selected_date_str]
 
     try:
         schedule_df['parsed_date'] = pd.to_datetime(schedule_df['date'])
@@ -193,7 +194,7 @@ def draw_schedule_table(schedule_df: pd.DataFrame) -> None:
         html_rows = ""
 
         # 오늘 날짜이고 크롤링된 데이터가 존재할 때 렌더링 스위칭
-        if is_today_selected and today_live_results:
+        if today_live_results:
             num_rows = len(today_live_results)
             for idx_count, game in enumerate(today_live_results):
                 away_key = game['away']
@@ -208,17 +209,27 @@ def draw_schedule_table(schedule_df: pd.DataFrame) -> None:
                 away_logo_url = get_base64_image(os.path.join(LOGO_DIR, TEAM_LOGOS.get(away_key, "")))
                 home_logo_url = get_base64_image(os.path.join(LOGO_DIR, TEAM_LOGOS.get(home_key, "")))
 
-                date_str = f"{now.strftime('%m/%d')} (오늘)"
+                # 수정
+                date_str = f"{data_month:02d}/{st.session_state.selected_day:02d} ({'오늘' if is_today_selected else days_of_week[datetime(now.year, data_month, st.session_state.selected_day).weekday() % 7]})"
 
                 # 💡 게임 상태 배지 생성
                 status = game['status']
+                cancel = game.get('cancel', False)
+                suspended = game.get('suspended', False)
+
                 if status == "RESULT":
                     vs_bg = "#E5E7EB"
                     vs_text = "종료"
-                elif status == "LIVE":
+                elif status == "LIVE" or status == "STARTED":
                     vs_bg = "#FEE2E2"
                     vs_text = "LIVE"
-                else:  # SCHEDULED
+                elif cancel:
+                    vs_bg = "#FEF9C3"
+                    vs_text = "취소"
+                elif suspended:
+                    vs_bg = "#FEF9C3"
+                    vs_text = "우천취소"
+                else:
                     vs_bg = "#FFFFFF"
                     vs_text = "예정"
 
