@@ -228,4 +228,4 @@ feature/*             ← 기타 기능별 개발 브랜치
 
 ## 📄 라이선스
 
-이 프로젝트는 [MIT License](LICENSE) 하에 배포됩니다.
+이 프로젝트는 ngrok 및 [MIT License](LICENSE) 하에 배포됩니다.
