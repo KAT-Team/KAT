@@ -521,6 +521,8 @@ def show():
                     home_ratio_num = max(1, prob_result["home_prob"])
                 except Exception:
                     votes_data = st.session_state.total_match_votes[i]
+                    away_votes = votes_data["away"]
+                    home_votes = votes_data["home"]
                     away_ratio_num = max(1, int(round((votes_data["away"] / (votes_data["away"] + votes_data["home"])) * 100)))
                     home_ratio_num = max(1, 100 - away_ratio_num)
 
@@ -551,7 +553,9 @@ def show():
             st.info("아직 제출된 승부예측 히스토리가 존재하지 않습니다. 첫 번째 예측 기록의 주인공이 되어보세요!")
         else:
             table_data = []
+            is_history_updated = False
 
+            # 오늘 파일(st.session_state.vote_history)에 대한 실시간 네이버 스코어 정산 진행
             for record in st.session_state.vote_history[::-1]:
                 pts = record.get("total_points", 0)
                 formatted_pts = f"{pts:,} P" if pts > 0 else "-"
@@ -572,7 +576,6 @@ def show():
                             continue
 
                         user_pick_eng = TEAM_NAME_KR.get(team_part, team_part)
-
                         target_live = next((g for g in live_results if g["status"] == "RESULT" and (g["home"] == user_pick_eng or g["away"] == user_pick_eng)), None)
 
                         if target_live:
@@ -581,6 +584,11 @@ def show():
                             elif target_live["winner"] == "away" and target_live["away"] == user_pick_eng:
                                 user_earned_points += match_point
 
+                # 오늘 경기 결과에 따라 earn_point 실시간 업데이트 여부 확인
+                if record.get("earn_point") != user_earned_points:
+                    record["earn_point"] = user_earned_points
+                    is_history_updated = True
+
                 table_data.append({
                     "순번": record["no"],
                     "참여자 닉네임": f"👤 {record['nickname']}",
@@ -588,6 +596,10 @@ def show():
                     "최대 예상 리워드": formatted_pts,
                     "획득한 리워드": f"{user_earned_points:,} P" if user_earned_points > 0 else "0 P"
                 })
+
+            # 오늘 파일 데이터에 변동이 있다면 파일 쓰기 저장
+            if is_history_updated:
+                save_vote_history_to_file(MATCH_DATE, st.session_state.vote_history)
 
             st.dataframe(
                 data=table_data,
@@ -600,31 +612,57 @@ def show():
                 }
             )
 
-    # 🎯 여기에 피드형 최하단 right_content 배치 (picks_ranking.json 파일만 단순 로드 및 시각화)
-    # 4️⃣ 📜 실시간 참여 유저 예측 현황 피드 구역의 right_content
+    # 🏆 [전면 수정] 폴더 내 '모든 날짜 파일'을 다 뒤져서 누적 랭킹 파일(picks_ranking.json) 생성 및 로드
     with right_content:
         st.markdown("### 🏆 포인트 랭킹")
         st.markdown("<p style='font-size: 14px; color: gray;'>포인트 랭킹 상위 5인입니다.</p>", unsafe_allow_html=True)
 
-        # 🛠️ [수정됨] 읽어오는 파일 경로를 vote_history 폴더 내부로 변경
-        ranking_file_path = os.path.join("backend", "data", "vote_history", "picks_ranking.json")
-        ranking_list = []
+        history_dir = os.path.join("backend", "data", "vote_history")
+        ranking_file_path = os.path.join(history_dir, "picks_ranking.json")
 
-        # 오직 작성된 json 파일 내용만 로드(Read)하여 파싱
-        if os.path.exists(ranking_file_path):
-            try:
-                with open(ranking_file_path, "r", encoding="utf-8") as f:
-                    ranking_list = json.load(f)
-            except Exception as e:
-                st.error(f"⚠️ 랭킹 데이터 로드 실패: {e}")
+        # 모든 날짜의 포인트를 담을 딕셔너리
+        cumulative_scores = {}
 
-        if not ranking_list:
-            st.markdown('<div style="border: 1px dashed #E2E8F0; border-radius: 12px; padding: 20px; text-align: center; color: #A0AEC0; font-size: 13px; margin-top: 15px;">아직 집계된 랭킹 정보가 없습니다.</div>', unsafe_allow_html=True)
+        if os.path.exists(history_dir):
+            # 폴더 내의 vote_history_2026xxxx.json 패턴을 가진 모든 파일을 리스트업 (어제 파일, 오늘 파일 모두 포함)
+            all_files = [f for f in os.listdir(history_dir) if f.startswith("vote_history_") and f.endswith(".json")]
+
+            for file_name in all_files:
+                try:
+                    with open(os.path.join(history_dir, file_name), "r", encoding="utf-8") as f:
+                        records = json.load(f)
+                    for r in records:
+                        name = r.get("nickname", "익명")
+                        # 이미 계산되어 들어있는 각 파일의 earn_point 값을 누적 합산 (어제 완료된 점수 + 오늘 획득 중인 점수)
+                        earned = r.get("earn_point", 0)
+                        cumulative_scores[name] = cumulative_scores.get(name, 0) + earned
+                except Exception:
+                    pass
+
+        # 📊 전 시점 유저 데이터를 스코어 기준 역순 정렬하여 랭킹 데이터 포맷 빌드
+        sorted_all_scores = sorted(cumulative_scores.items(), key=lambda x: x[1], reverse=True)
+        sorted_ranking_data = []
+        for rank_idx, (name, total_pt) in enumerate(sorted_all_scores):
+            sorted_ranking_data.append({
+                "no": rank_idx + 1,
+                "nickname": name,
+                "gained_points": total_pt
+            })
+
+        # 실시간 종합된 누적 데이터를 picks_ranking.json에 완전히 덮어씌움(Write)
+        try:
+            with open(ranking_file_path, "w", encoding="utf-8") as f:
+                json.dump(sorted_ranking_data, f, ensure_ascii=False, indent=4)
+        except Exception:
+            pass
+
+        # 화면 출력용 Top 5 자르기
+        top_5_ranking = sorted_ranking_data[:5]
+
+        # 누적 포인트 합이 0이거나 데이터가 없다면 대기 문구 출력
+        if not top_5_ranking or sum(x.get("gained_points", 0) for x in top_5_ranking) == 0:
+            st.markdown('<div style="border: 1px dashed #E2E8F0; border-radius: 12px; padding: 20px; text-align: center; color: #A0AEC0; font-size: 13px; margin-top: 15px;">아직 종료된 경기가 없거나 집계된 랭킹 정보가 없습니다.</div>', unsafe_allow_html=True)
         else:
-            # 랭킹 데이터파일 내의 gained_points 필드를 역순(높은 순) 정렬 후 Top 5 추출
-            sorted_ranking = sorted(ranking_list, key=lambda x: x.get("gained_points", 0), reverse=True)
-            top_5_ranking = sorted_ranking[:5]
-
             ranking_table = []
             medals = ["🥇", "🥈", "🥉", "4등", "5등"]
 
