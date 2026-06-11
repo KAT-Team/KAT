@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 import streamlit as st
 from backend.data.team_crawler import crawl_all_team_stats
 from backend.simulation.predict import calc_win_probability
-# 💡 네이버 스포츠 결과 API 함수 가져오기
 from backend.data.naver_game_crawler import get_today_results
 
 TEAM_NAME_KR = {
@@ -144,8 +143,6 @@ def save_vote_history_to_file(date_obj, history_list):
 
 
 def show():
-    cached_stats = crawl_all_team_stats()
-
     # 💡 실시간 네이버 경기 정보 검색 가져오기
     live_results = get_today_results()
 
@@ -222,7 +219,6 @@ def show():
                 votes_data = st.session_state.total_match_votes[idx]
 
                 try:
-                    # 🛠️ [수정 완료] 아규먼트 배치 순서 교정: (home, away)
                     prob_result = calc_win_probability(
                         match["home_eng"], match["away_eng"], "", "", 50, 50
                     )
@@ -253,12 +249,47 @@ def show():
                 "no": len(file_history) + 1,
                 "nickname": input_nickname,
                 "picks": " , ".join(current_submission_picks),
-                "total_points": submission_total_points
+                "total_points": submission_total_points,
+                "earn_point": submission_total_points  # 🔥 테스트를 위해 total_points와 동일하게 추가!
             }
 
             file_history.append(new_record)
             save_vote_history_to_file(MATCH_DATE, file_history)
             st.session_state.vote_history = file_history
+
+            # 2. 📜 실시간 정산 및 누적 파일(picks_ranking.json) 새로 빌드하기
+            history_dir = os.path.join("backend", "data", "vote_history")
+            ranking_file_path = os.path.join(history_dir, "picks_ranking.json")
+            cumulative_scores = {}
+
+            if os.path.exists(history_dir):
+                all_files = [f for f in os.listdir(history_dir) if f.startswith("vote_history_") and f.endswith(".json")]
+                for file_name in all_files:
+                    try:
+                        with open(os.path.join(history_dir, file_name), "r", encoding="utf-8") as f:
+                            records = json.load(f)
+                        for r in records:
+                            name = r.get("nickname", "익명")
+
+                            earned = r.get("earn_point", r.get("total_points", 0))
+
+                            cumulative_scores[name] = cumulative_scores.get(name, 0) + earned
+                    except Exception:
+                        pass
+
+            # 📊 요청하신 JSON 포맷 형태로 데이터 변환 및 정렬 후 파일 쓰기
+            sorted_all = sorted(cumulative_scores.items(), key=lambda x: x[1], reverse=True)
+            ranking_json_data = []
+            for rank_idx, (name, total_pt) in enumerate(sorted_all):
+                ranking_json_data.append({
+                    "no": rank_idx + 1,
+                    "nickname": name,
+                    "gained_points": total_pt
+                })
+
+            os.makedirs(os.path.dirname(ranking_file_path), exist_ok=True)
+            with open(ranking_file_path, "w", encoding="utf-8") as f:
+                json.dump(ranking_json_data, f, ensure_ascii=False, indent=4)
 
             for idx in range(len(TODAYS_MATCHES)):
                 st.session_state.user_current_picks[idx] = "none"
@@ -288,7 +319,6 @@ def show():
             total_votes = away_votes + home_votes
 
             try:
-                # 🛠️ [수정 완료] 아규먼트 배치 순서 교정: (home, away)
                 prob_result = calc_win_probability(
                     match["home_eng"], match["away_eng"], "", "", 50, 50
                 )
@@ -316,15 +346,25 @@ def show():
             away_img_html = f'<img src="{away_logo_url}" width="34" height="34" style="object-fit: contain;">' if away_logo_url else '⚾'
             home_img_html = f'<img src="{home_logo_url}" width="34" height="34" style="object-fit: contain;">' if home_logo_url else '⚾'
 
-            # 💡 [추가] 실시간 매칭 상태 추출 파트
-            game_status_text = f"{match['time']} | {match['stadium']}"
-            target_live = next((g for g in live_results if g["home"] == match["home_eng"] and g["away"] == match["away_eng"]), None)
+            try:
+                formatted_away_avg = f"{float(match['away_avg']):.3f}" if str(match['away_avg']).strip() else "0.000"
+            except ValueError:
+                formatted_away_avg = match['away_avg']
 
-            if target_live:
-                if target_live["status"] == "RESULT":
-                    game_status_text = f"경기종료 | {target_live['away_score']} : {target_live['home_score']}"
-                elif target_live["status"] == "LIVE":
-                    game_status_text = f"진행중 ({target_live['away_score']}:{target_live['home_score']}) | {match['stadium']}"
+            try:
+                formatted_home_avg = f"{float(match['home_avg']):.3f}" if str(match['home_avg']).strip() else "0.000"
+            except ValueError:
+                formatted_home_avg = match['home_avg']
+
+            try:
+                formatted_away_era = f"{float(match['away_era']):.2f}" if str(match['away_era']).strip() else "0.00"
+            except ValueError:
+                formatted_away_era = match['away_era']
+
+            try:
+                formatted_home_era = f"{float(match['home_era']):.2f}" if str(match['home_era']).strip() else "0.00"
+            except ValueError:
+                formatted_home_era = match['home_era']
 
             st.markdown(f"""
             <style>
@@ -352,7 +392,7 @@ def show():
                         <div style="line-height: 1.4;">
                             <span style="font-size: 15px; font-weight: bold; color: #1A202C;">{match['away']}</span>
                             <span style="color: #718096; font-size: 10px; background-color: rgba(0,0,0,0.05); padding: 1px 4px; border-radius: 3px;">원정</span><br>
-                            <span style="font-size: 11px; color: #4A5568; white-space: nowrap;">타율 {match['away_avg']} | ERA {match['away_era']}</span>
+                            <span style="font-size: 11px; color: #4A5568; white-space: nowrap;">타율 {formatted_away_avg} | ERA {formatted_away_era}</span>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -361,7 +401,6 @@ def show():
                     st.markdown(f"""
                     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 100%; font-family: sans-serif;">
                         <div style="display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%;">
-                            <span style="font-size: 12px; font-weight: bold; color: #4A5568;">{game_status_text}</span>
                         </div>
                         <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px;">
                             <div style="text-align: right; min-width: 40px; font-size: 12px; font-weight: bold; color: #2D3748; line-height: 1.1;">{away_ratio_num}%<br><span style="font-size: 9px; color: #3182CE; font-weight: 600;">{away_point_str}</span></div>
@@ -377,7 +416,7 @@ def show():
                         <div style="line-height: 1.4;">
                             <span style="color: #718096; font-size: 10px; background-color: rgba(0,0,0,0.05); padding: 1px 4px; border-radius: 3px;">홈</span>
                             <span style="font-size: 15px; font-weight: bold; color: #1A202C;">{match['home']}</span><br>
-                            <span style="font-size: 11px; color: #4A5568; white-space: nowrap;">타율 {match['home_avg']} | ERA {match['home_era']}</span>
+                            <span style="font-size: 11px; color: #4A5568; white-space: nowrap;">타율 {formatted_home_avg} | ERA {formatted_home_era}</span>
                         </div>
                         <div style="display: flex; justify-content: center; align-items: center; width: 34px; height: 34px;">{home_img_html}</div>
                     </div>
@@ -386,7 +425,6 @@ def show():
                 with col_chk_home:
                     st.checkbox("", key=f"chk_home_raw_{i}", label_visibility="collapsed", on_change=on_home_change, args=(i,))
 
-                # 파라미터 시각화 추가
                 if prob_result:
                     factors = prob_result.get("factors", {})
                     away_color = TEAM_COLORS.get(match["away_eng"], "#333333")
@@ -428,22 +466,23 @@ def show():
                     rows_home = make_rows(params_home, home_color)
 
                     final_html = (
-                        '<div style="display:flex; gap:16px; padding:8px 16px; border-top:1px solid #f0f0f0; margin-top:4px;">'
+                        '<div style="display:flex; gap:16px; padding:4px 0; margin-top:4px;">'
                         '<div style="flex:1;">'
-                        '<div style="font-size:11px; color:#888; margin-bottom:6px;">📊 원정팀(' + match["away"] + ') 기준</div>'
+                        '<div style="font-size:11px; color:#888; margin-bottom:6px;">원정팀(' + match["away"] + ') 기준</div>'
                         + rows_away +
                         '<div style="font-size:11px; font-weight:bold; color:' + away_color + '; margin-top:6px;">→ 원정팀 승리 확률: ' + str(away_ratio_num) + '%</div>'
                         '</div>'
                         '<div style="width:1px; background:#e0e0e0;"></div>'
                         '<div style="flex:1;">'
-                        '<div style="font-size:11px; color:#888; margin-bottom:6px;">📊 홈팀(' + match["home"] + ') 기준</div>'
+                        '<div style="font-size:11px; color:#888; margin-bottom:6px;">홈팀(' + match["home"] + ') 기준</div>'
                         + rows_home +
                         '<div style="font-size:11px; font-weight:bold; color:' + home_color + '; margin-top:6px; text-align:right;">→ 홈팀 승리 확률: ' + str(home_ratio_num) + '%</div>'
                         '</div>'
                         '</div>'
                     )
-                    st.markdown(final_html, unsafe_allow_html=True)
 
+                    with st.expander("승률 예측  보기", expanded=False):
+                        st.markdown(final_html,     unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -482,6 +521,8 @@ def show():
                     home_ratio_num = max(1, prob_result["home_prob"])
                 except Exception:
                     votes_data = st.session_state.total_match_votes[i]
+                    away_votes = votes_data["away"]
+                    home_votes = votes_data["home"]
                     away_ratio_num = max(1, int(round((votes_data["away"] / (votes_data["away"] + votes_data["home"])) * 100)))
                     home_ratio_num = max(1, 100 - away_ratio_num)
 
@@ -500,10 +541,10 @@ def show():
             summary_final_html = f'<div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; font-family: sans-serif;">{summary_inner_html}<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 4px;"><span style="font-size: 14px; font-weight: bold; color: #2D3748;">선택 완료 경기</span><span style="font-size: 15px; font-weight: bold; color: #2D3748;">{submit_count} / {len(TODAYS_MATCHES)}</span></div><div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;"><span style="font-size: 14px; font-weight: bold; color: #2D3748;">최대 획득 포인트</span><span style="font-size: 18px; font-weight: 800; color: #3182CE;">{total_potential_points:,} P</span></div></div>'
             st.markdown(summary_final_html, unsafe_allow_html=True)
 
-    # 4️⃣ 📜 실시간 참여 유저 예측 현황 피드 (순수 스트림릿 데이터프레임 기반 정산)
+    # 4️⃣ 📜 실시간 참여 유저 예측 현황 피드
     st.markdown("---")
 
-    left_space, center_content, right_space = st.columns([1.5, 8, 1.5])
+    left_space, center_content, right_content, right_space = st.columns([1.5, 6, 2, 1.5])
     with center_content:
         st.markdown("### 📜 승부예측 유저 참여 현황")
         st.markdown("<p style='font-size: 14px; color: gray;'>유저들이 등록한 승부예측 기록과 실시간 정산 결과입니다. (최근 제출 순서 상단 정렬)</p>", unsafe_allow_html=True)
@@ -512,7 +553,9 @@ def show():
             st.info("아직 제출된 승부예측 히스토리가 존재하지 않습니다. 첫 번째 예측 기록의 주인공이 되어보세요!")
         else:
             table_data = []
+            is_history_updated = False
 
+            # 오늘 파일(st.session_state.vote_history)에 대한 실시간 네이버 스코어 정산 진행
             for record in st.session_state.vote_history[::-1]:
                 pts = record.get("total_points", 0)
                 formatted_pts = f"{pts:,} P" if pts > 0 else "-"
@@ -533,7 +576,6 @@ def show():
                             continue
 
                         user_pick_eng = TEAM_NAME_KR.get(team_part, team_part)
-
                         target_live = next((g for g in live_results if g["status"] == "RESULT" and (g["home"] == user_pick_eng or g["away"] == user_pick_eng)), None)
 
                         if target_live:
@@ -541,6 +583,11 @@ def show():
                                 user_earned_points += match_point
                             elif target_live["winner"] == "away" and target_live["away"] == user_pick_eng:
                                 user_earned_points += match_point
+
+                # 오늘 경기 결과에 따라 earn_point 실시간 업데이트 여부 확인
+                if record.get("earn_point") != user_earned_points:
+                    record["earn_point"] = user_earned_points
+                    is_history_updated = True
 
                 table_data.append({
                     "순번": record["no"],
@@ -550,13 +597,88 @@ def show():
                     "획득한 리워드": f"{user_earned_points:,} P" if user_earned_points > 0 else "0 P"
                 })
 
+            # 오늘 파일 데이터에 변동이 있다면 파일 쓰기 저장
+            if is_history_updated:
+                save_vote_history_to_file(MATCH_DATE, st.session_state.vote_history)
+
             st.dataframe(
                 data=table_data,
                 use_container_width=True,
                 hide_index=True,
                 column_config={
-                    "순번": st.column_config.NumberColumn(alignment="center"),
+                    "순위": st.column_config.NumberColumn(alignment="center"),
                     "최대 예상 리워드": st.column_config.TextColumn(alignment="center"),
                     "획득한 리워드": st.column_config.TextColumn(alignment="center"),
+                }
+            )
+
+    # 🏆 [전면 수정] 폴더 내 '모든 날짜 파일'을 다 뒤져서 누적 랭킹 파일(picks_ranking.json) 생성 및 로드
+    with right_content:
+        st.markdown("### 🏆 포인트 랭킹")
+        st.markdown("<p style='font-size: 14px; color: gray;'>포인트 랭킹 상위 5인입니다.</p>", unsafe_allow_html=True)
+
+        history_dir = os.path.join("backend", "data", "vote_history")
+        ranking_file_path = os.path.join(history_dir, "picks_ranking.json")
+
+        # 모든 날짜의 포인트를 담을 딕셔너리
+        cumulative_scores = {}
+
+        if os.path.exists(history_dir):
+            # 폴더 내의 vote_history_2026xxxx.json 패턴을 가진 모든 파일을 리스트업 (어제 파일, 오늘 파일 모두 포함)
+            all_files = [f for f in os.listdir(history_dir) if f.startswith("vote_history_") and f.endswith(".json")]
+
+            for file_name in all_files:
+                try:
+                    with open(os.path.join(history_dir, file_name), "r", encoding="utf-8") as f:
+                        records = json.load(f)
+                    for r in records:
+                        name = r.get("nickname", "익명")
+                        # 이미 계산되어 들어있는 각 파일의 earn_point 값을 누적 합산 (어제 완료된 점수 + 오늘 획득 중인 점수)
+                        earned = r.get("earn_point", 0)
+                        cumulative_scores[name] = cumulative_scores.get(name, 0) + earned
+                except Exception:
+                    pass
+
+        # 📊 전 시점 유저 데이터를 스코어 기준 역순 정렬하여 랭킹 데이터 포맷 빌드
+        sorted_all_scores = sorted(cumulative_scores.items(), key=lambda x: x[1], reverse=True)
+        sorted_ranking_data = []
+        for rank_idx, (name, total_pt) in enumerate(sorted_all_scores):
+            sorted_ranking_data.append({
+                "no": rank_idx + 1,
+                "nickname": name,
+                "gained_points": total_pt
+            })
+
+        # 실시간 종합된 누적 데이터를 picks_ranking.json에 완전히 덮어씌움(Write)
+        try:
+            with open(ranking_file_path, "w", encoding="utf-8") as f:
+                json.dump(sorted_ranking_data, f, ensure_ascii=False, indent=4)
+        except Exception:
+            pass
+
+        # 화면 출력용 Top 5 자르기
+        top_5_ranking = sorted_ranking_data[:5]
+
+        # 누적 포인트 합이 0이거나 데이터가 없다면 대기 문구 출력
+        if not top_5_ranking or sum(x.get("gained_points", 0) for x in top_5_ranking) == 0:
+            st.markdown('<div style="border: 1px dashed #E2E8F0; border-radius: 12px; padding: 20px; text-align: center; color: #A0AEC0; font-size: 13px; margin-top: 15px;">아직 종료된 경기가 없거나 집계된 랭킹 정보가 없습니다.</div>', unsafe_allow_html=True)
+        else:
+            ranking_table = []
+            medals = ["🥇", "🥈", "🥉", "4등", "5등"]
+
+            for idx, record in enumerate(top_5_ranking):
+                ranking_table.append({
+                    "순위": medals[idx],
+                    "참여자": f"👤 {record.get('nickname', '익명')}",
+                    "누적 포인트": f"{record.get('gained_points', 0):,} P"
+                })
+
+            st.dataframe(
+                data=ranking_table,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "순위": st.column_config.TextColumn(alignment="center", width="small"),
+                    "누적 포인트": st.column_config.TextColumn(alignment="right"),
                 }
             )
