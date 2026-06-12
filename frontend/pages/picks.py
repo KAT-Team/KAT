@@ -220,7 +220,7 @@ def show():
 
                 try:
                     prob_result = calc_win_probability(
-                        match["home_eng"], match["away_eng"], "", "", 50, 50
+                        match["home_eng"], match["away_eng"], "", ""
                     )
                     away_ratio_num = max(1, prob_result["away_prob"])
                     home_ratio_num = max(1, prob_result["home_prob"])
@@ -320,7 +320,7 @@ def show():
 
             try:
                 prob_result = calc_win_probability(
-                    match["home_eng"], match["away_eng"], "", "", 50, 50
+                    match["home_eng"], match["away_eng"], "", ""
                 )
                 away_ratio_num = max(1, prob_result["away_prob"])
                 home_ratio_num = max(1, prob_result["home_prob"])
@@ -515,7 +515,7 @@ def show():
 
                 try:
                     prob_result = calc_win_probability(
-                        match["home_eng"], match["away_eng"], "", "", 50, 50
+                        match["home_eng"], match["away_eng"], "", ""
                     )
                     away_ratio_num = max(1, prob_result["away_prob"])
                     home_ratio_num = max(1, prob_result["home_prob"])
